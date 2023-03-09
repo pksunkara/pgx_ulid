@@ -1,12 +1,28 @@
-use pgx::prelude::*;
+use pgx::{
+    pg_sys::{Datum, Oid},
+    prelude::*,
+};
 use serde::{Deserialize, Serialize};
+use ulid::Ulid as InnerUlid;
 
 pgx::pg_module_magic!();
 
 #[derive(
     Serialize, Deserialize, PostgresType, PostgresEq, PostgresOrd, PartialEq, PartialOrd, Eq, Ord,
 )]
-pub struct Ulid([u8; 16]);
+pub struct Ulid(Option<[u8; 16]>);
+
+#[pg_extern]
+fn generate_ulid() -> Ulid {
+    let ulid = InnerUlid::new();
+
+    let mut bytes = [0u8; 16];
+    for i in 0..16 {
+        bytes[i] = (ulid.0 >> (i * 8)) as u8;
+    }
+
+    Ulid(Some(bytes))
+}
 
 #[pg_extern]
 fn hello_ulid() -> &'static str {
