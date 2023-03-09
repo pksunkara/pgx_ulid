@@ -1,32 +1,68 @@
+use ::ulid::Ulid as InnerUlid;
+use core::ffi::CStr;
 use pgx::{
     pg_sys::{Datum, Oid},
     prelude::*,
+    StringInfo,
 };
-use serde::{Deserialize, Serialize};
-use ulid::Ulid as InnerUlid;
 
 pgx::pg_module_magic!();
 
-#[derive(
-    Serialize, Deserialize, PostgresType, PostgresEq, PostgresOrd, PartialEq, PartialOrd, Eq, Ord,
-)]
-pub struct Ulid(Option<[u8; 16]>);
+#[allow(non_camel_case_types)]
+#[derive(PostgresType, PostgresEq, PostgresOrd, PartialEq, PartialOrd, Eq, Ord)]
+#[inoutfuncs]
+pub struct ulid(InnerUlid);
 
-#[pg_extern]
-fn generate_ulid() -> Ulid {
-    let ulid = InnerUlid::new();
+impl InOutFuncs for ulid {
+    #[inline]
+    fn input(input: &CStr) -> Self
+    where
+        Self: Sized,
+    {
+        let val = input.to_str().unwrap();
+        let inner = InnerUlid::from_string(val)
+            .expect(&format!("invalid input syntax for type ulid: \"{val}\""));
 
-    let mut bytes = [0u8; 16];
-    for i in 0..16 {
-        bytes[i] = (ulid.0 >> (i * 8)) as u8;
+        ulid(inner)
     }
 
-    Ulid(Some(bytes))
+    #[inline]
+    fn output(&self, buffer: &mut StringInfo) {
+        buffer.push_str(&self.0.to_string())
+    }
+}
+
+impl IntoDatum for ulid {
+    #[inline]
+    fn into_datum(self) -> Option<Datum> {
+        self.0 .0.to_ne_bytes().into_datum()
+    }
+
+    #[inline]
+    fn type_oid() -> Oid {
+        pg_sys::BYTEAOID
+    }
+}
+
+impl FromDatum for ulid {
+    #[inline]
+    unsafe fn from_polymorphic_datum(datum: Datum, is_null: bool, typoid: Oid) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        let bytes: &[u8] = FromDatum::from_polymorphic_datum(datum, is_null, typoid)?;
+
+        let mut len_bytes = [0u8; 16];
+        len_bytes.copy_from_slice(bytes);
+
+        Some(ulid(InnerUlid(u128::from_ne_bytes(len_bytes))))
+    }
 }
 
 #[pg_extern]
-fn hello_ulid() -> &'static str {
-    "Hello, ulid"
+fn generate_ulid() -> ulid {
+    let inner = InnerUlid::new();
+    ulid(inner)
 }
 
 #[cfg(any(test, feature = "pg_test"))]
@@ -35,8 +71,8 @@ mod tests {
     use pgx::prelude::*;
 
     #[pg_test]
-    fn test_hello_ulid() {
-        assert_eq!("Hello, ulid", crate::hello_ulid());
+    fn test_string_to_ulid() {
+        assert_eq!(1, 1);
     }
 }
 
