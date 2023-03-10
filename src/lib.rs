@@ -11,7 +11,7 @@ pgx::pg_module_magic!();
 #[allow(non_camel_case_types)]
 #[derive(PostgresType, PostgresEq, PostgresOrd, PartialEq, PartialOrd, Eq, Ord)]
 #[inoutfuncs]
-pub struct ulid(InnerUlid);
+pub struct ulid(u128);
 
 impl InOutFuncs for ulid {
     #[inline]
@@ -23,19 +23,19 @@ impl InOutFuncs for ulid {
         let inner = InnerUlid::from_string(val)
             .expect(&format!("invalid input syntax for type ulid: \"{val}\""));
 
-        ulid(inner)
+        ulid(inner.0)
     }
 
     #[inline]
     fn output(&self, buffer: &mut StringInfo) {
-        buffer.push_str(&self.0.to_string())
+        buffer.push_str(&InnerUlid(self.0).to_string())
     }
 }
 
 impl IntoDatum for ulid {
     #[inline]
     fn into_datum(self) -> Option<Datum> {
-        self.0 .0.to_ne_bytes().into_datum()
+        self.0.to_ne_bytes().into_datum()
     }
 
     #[inline]
@@ -55,14 +55,13 @@ impl FromDatum for ulid {
         let mut len_bytes = [0u8; 16];
         len_bytes.copy_from_slice(bytes);
 
-        Some(ulid(InnerUlid(u128::from_ne_bytes(len_bytes))))
+        Some(ulid(u128::from_ne_bytes(len_bytes)))
     }
 }
 
 #[pg_extern]
-fn generate_ulid() -> ulid {
-    let inner = InnerUlid::new();
-    ulid(inner)
+fn gen_ulid() -> ulid {
+    ulid(InnerUlid::new().0)
 }
 
 #[cfg(any(test, feature = "pg_test"))]
