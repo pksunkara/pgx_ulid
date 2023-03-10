@@ -6,6 +6,8 @@ use pgx::{
     StringInfo,
 };
 
+// TODO: Why, Casting, Testing (+ ci), Packaging
+
 pgx::pg_module_magic!();
 
 #[allow(non_camel_case_types)]
