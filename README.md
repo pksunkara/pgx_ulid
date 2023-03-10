@@ -1,5 +1,5 @@
 <!-- omit from toc -->
-## pgx_ulid
+# pgx_ulid
 
 A postgres extension to support [ulid][].
 
@@ -8,7 +8,7 @@ A postgres extension to support [ulid][].
 3. [Usage](#usage)
 4. [Installation](#installation)
 
-#### Why should I use this?
+## Why should I use this?
 
 There are several different postgres extensions for [ulid][], but all of them have feature gaps. A good extension should have:
 
@@ -33,10 +33,11 @@ There are several different postgres extensions for [ulid][], but all of them ha
 [^1]: You can convert the [ulid][] into `uuid` or `bytea` and store it like that.
 [^2]: Supports casting indirectly through `bytea`.
 
-#### Why should I use ulid over uuid?
+## Why should I use ulid over uuid?
+
+This extension is approximately 30% faster than both `pgcrypto` uuid and `pg_uuidv7` uuidv7 when generating a million identifiers.
 
 <details>
-<summary>This extension is approximately 30% faster than both `pgcrypto` uuid and `pg_uuidv7` uuidv7 when generating a million identifiers.</summary>
 
 ```
 ulid=# EXPLAIN ANALYSE SELECT gen_random_uuid() FROM generate_series(1, 1000000);
@@ -65,8 +66,9 @@ ulid=# EXPLAIN ANALYSE SELECT gen_ulid() FROM generate_series(1, 1000000);
 ```
 </details>
 
+This extension is approximately 20% faster than both `pgcrypto` uuid and `pg_uuidv7` uuidv7 when generating and inserting a million identifiers.
+
 <details>
-<summary>This extension is approximately 20% faster than both `pgcrypto` uuid and `pg_uuidv7` uuidv7 when generating and inserting a million identifiers.</summary>
 
 ```
 ulid=# EXPLAIN ANALYSE INSERT INTO uuid_keys(id) SELECT gen_random_uuid() FROM generate_series(1, 1000000);
@@ -98,7 +100,7 @@ ulid=# EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate
 ```
 </details>
 
-#### Usage
+## Usage
 
 Use the extension in the database:
 
@@ -128,7 +130,7 @@ ALTER TABLE users
 ADD COLUMN created_at timestamp GENERATED ALWAYS AS id::timestamp STORED;
 ```
 
-#### Installation
+## Installation
 
 Use [pgx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgx/blob/master/cargo-pgx/README.md#installing-your-extension-locally).
 
