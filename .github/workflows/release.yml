@@ -53,7 +53,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends git build-essential libpq-dev curl libreadline6-dev zlib1g-dev pkg-config cmake
           sudo apt-get install -y --no-install-recommends libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libxml2-utils xsltproc ccache
-          sudo apt-get install -y --no-install-recommends clang libclang-dev gcc tree
+          sudo apt-get install -y --no-install-recommends clang libclang-dev llvm-dev gcc tree
 
           # Install requested postgres version
           sudo apt install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }} -y

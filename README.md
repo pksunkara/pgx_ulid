@@ -35,6 +35,12 @@ There are several different postgres extensions for [ulid][], but all of them ha
 
 ## Why should I use ulid over uuid?
 
+The main advantages are:
+
+* Indexes created over ULIDs are less fragmented compared to UUIDs due to the timestamp that was encoded in the ULID when it was created.
+* ULIDs don't use special characters, so they can be used in URLs or even HTML.
+* ULIDs are shorter than UUIDs as they are comprised of 26 characters compared to UUIDs' 36 characters.
+
 This extension is approximately **30% faster** than both `pgcrypto`'s UUID and `pg_uuidv7`'s UUIDv7 when generating a million identifiers.
 
 <details>
@@ -145,10 +151,6 @@ Here is a list of [Contributors](http://github.com/pksunkara/pgx_ulid/contributo
 
 <!-- omit from toc -->
 ### TODO
-
-* Document why
-* CI
-* Packaging
 
 <!-- omit from toc -->
 ## License
