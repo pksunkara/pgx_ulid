@@ -1,3 +1,6 @@
+env:
+  NAME: ulid
+  PKG_NAME: pgx_ulid
 name: Release
 on:
   push:
@@ -23,20 +26,16 @@ jobs:
       - create-release
     strategy:
       matrix:
-        extension_name:
-          - ulid
-        package_name:
-          - pgx_ulid
-        pgx_version:
-          - 0.7.3
         postgres: [14, 15]
         box:
-          - runner: ubuntu-20.04
+          - runner: ubuntu-latest
             arch: amd64
           - runner: arm-runner
             arch: arm64
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 45
+    env:
+      PKG_DIR: ${{ env.NAME }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -47,7 +46,7 @@ jobs:
           toolchain: 1.68.0
           target: ${{ matrix.target }}
           override: true
-      - name: build release artifacts
+      - name: Install dependencies
         run: |
           # Add postgres package repo
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -64,38 +63,36 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          cargo install cargo-pgx --version ${{ matrix.pgx_version }} --locked
+          cargo install cargo-pgx --version 0.7.3 --locked
           cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
-
+      - name: Build artifacts
+        run: |
           # selects the pgVer from pg_config on path
           # https://github.com/tcdi/pgx/issues/288
           cargo pgx package --no-default-features --features pg${{ matrix.postgres }}
 
           # Create installable package
           mkdir archive
-          cp `find target/release -type f -name "${{ matrix.extension_name }}*"` archive
-
-          # name of the package directory before packaging
-          package_dir=${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
+          cp `find target/release -type f -name "${{ env.NAME }}*"` archive
 
           # Copy files into directory structure
-          mkdir -p ${package_dir}/usr/lib/postgresql/lib
-          mkdir -p ${package_dir}/var/lib/postgresql/extension
-          cp archive/*.so ${package_dir}/usr/lib/postgresql/lib
-          cp archive/*.control ${package_dir}/var/lib/postgresql/extension
-          cp archive/*.sql ${package_dir}/var/lib/postgresql/extension
+          mkdir -p ${{ env.PKG_DIR }}/usr/lib/postgresql/lib
+          mkdir -p ${{ env.PKG_DIR }}/var/lib/postgresql/extension
+          cp archive/*.so ${{ env.PKG_DIR }}/usr/lib/postgresql/lib
+          cp archive/*.control ${{ env.PKG_DIR }}/var/lib/postgresql/extension
+          cp archive/*.sql ${{ env.PKG_DIR }}/var/lib/postgresql/extension
 
           # symlinks to Copy files into directory structure
-          mkdir -p ${package_dir}/usr/lib/postgresql/${{ matrix.postgres }}/lib
-          cd ${package_dir}/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          mkdir -p ${{ env.PKG_DIR }}/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          cd ${{ env.PKG_DIR }}/usr/lib/postgresql/${{ matrix.postgres }}/lib
           cp -s ../../lib/*.so .
           cd ../../../../../..
 
-          mkdir -p ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
-          cd ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          mkdir -p ${{ env.PKG_DIR }}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          cd ${{ env.PKG_DIR }}/usr/share/postgresql/${{ matrix.postgres }}/extension
 
-          cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}.control .
-          cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}*.sql .
+          cp -s ../../../../../var/lib/postgresql/extension/${{ env.NAME }}.control .
+          cp -s ../../../../../var/lib/postgresql/extension/${{ env.NAME }}*.sql .
           cd ../../../../../..
 
           # Create install control file
@@ -103,24 +100,24 @@ jobs:
           # strip the leading v
           deb_version=${extension_version:1}
 
-          mkdir -p ${package_dir}/DEBIAN
-          touch ${package_dir}/DEBIAN/control
-          echo 'Package: ${{ matrix.package_name }}' >> ${package_dir}/DEBIAN/control
-          echo 'Version:' ${deb_version} >> ${package_dir}/DEBIAN/control
-          echo 'Architecture: ${{ matrix.box.arch }}' >> ${package_dir}/DEBIAN/control
-          echo 'Maintainer: supabase' >> ${package_dir}/DEBIAN/control
-          echo 'Description: A PostgreSQL extension' >> ${package_dir}/DEBIAN/control
+          mkdir -p ${{ env.PKG_DIR }}/DEBIAN
+          touch ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Package: ${{ env.PKG_NAME }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Version:' ${deb_version} >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Architecture: ${{ matrix.box.arch }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Maintainer: supabase' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Description: A PostgreSQL extension' >> ${{ env.PKG_DIR }}/DEBIAN/control
 
           # Create deb package
-          sudo chown -R root:root ${package_dir}
-          sudo chmod -R 00755 ${package_dir}
-          sudo dpkg-deb --build --root-owner-group ${package_dir}
+          sudo chown -R root:root ${{ env.PKG_DIR }}
+          sudo chmod -R 00755 ${{ env.PKG_DIR }}
+          sudo dpkg-deb --build --root-owner-group ${{ env.PKG_DIR }}
       - name: Upload artifacts
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
-          asset_name: ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
+          asset_path: ./${{ env.PKG_DIR }}.deb
+          asset_name: ${{ env.PKG_DIR }}.deb
           asset_content_type: application/vnd.debian.binary-package

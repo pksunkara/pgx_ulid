@@ -20,22 +20,22 @@ There are several different postgres extensions for [ulid][], but all of them ha
 
 |                             Name                              | Language | Generator | Binary | Type |  UUID  | Timestamp |
 | :-----------------------------------------------------------: | :------: | :-------: | :----: | :--: | :----: | :-------: |
-|      [`pgx_ulid`](https://github.com/pksunkara/pgx_ulid)      |   Rust   |    ✅     |   ✅   |  ✅  |   ✅   |    ✅     |
-|       [`pgulid`](https://github.com/geckoboard/pgulid)        | PL/pgSQL |    ✅     |   ❌   |  ❌  |   ❌   |    ❌     |
-|      [`pg_idkit`](https://github.com/VADOSWARE/pg_idkit)      |   Rust   |    ✅     |   ❌   |  ❌  |   ❌   |    ❌     |
-|   [`uids-postgres`](https://github.com/spa5k/uids-postgres)   |   Rust   |    ✅     | ⁉️[^1] |  ❌  | ⁉️[^2] |    ❌     |
-|    [`pgsql_ulid`](https://github.com/scoville/pgsql-ulid)     | PL/pgSQL |    ❌     | ⁉️[^1] |  ❌  |   ✅   |    ❌     |
-|        [`pg-ulid`](https://github.com/edoceo/pg-ulid)         |    C     |    ✅     |   ❌   |  ❌  |   ❌   |    ❌     |
-| [`ulid-postgres`](https://github.com/schinckel/ulid-postgres) | PL/pgSQL |    ✅     |   ❌   |  ✅  |   ❌   |    ✅     |
-|       [`pg_ulid`](https://github.com/iCyberon/pg_ulid)        |    Go    |    ✅     |   ❌   |  ❌  |   ❌   |    ✅     |
-|        [`pg_ulid`](https://github.com/RPG-18/pg_ulid)         |   C++    |    ✅     | ⁉️[^1] |  ❌  |   ✅   |    ❌     |
+|      [`pgx_ulid`](https://github.com/pksunkara/pgx_ulid)      |   Rust   |    ✔️     |   ✔️   |  ✔️  |   ✔️   |    ✔️     |
+|       [`pgulid`](https://github.com/geckoboard/pgulid)        | PL/pgSQL |    ✔️     |   ❌   |  ❌  |   ❌   |    ❌     |
+|      [`pg_idkit`](https://github.com/VADOSWARE/pg_idkit)      |   Rust   |    ✔️     |   ❌   |  ❌  |   ❌   |    ❌     |
+|   [`uids-postgres`](https://github.com/spa5k/uids-postgres)   |   Rust   |    ✔️     | ⁉️[^1] |  ❌  | ⁉️[^2] |    ❌     |
+|    [`pgsql_ulid`](https://github.com/scoville/pgsql-ulid)     | PL/pgSQL |    ❌     | ⁉️[^1] |  ❌  |   ✔️   |    ❌     |
+|        [`pg-ulid`](https://github.com/edoceo/pg-ulid)         |    C     |    ✔️     |   ❌   |  ❌  |   ❌   |    ❌     |
+| [`ulid-postgres`](https://github.com/schinckel/ulid-postgres) | PL/pgSQL |    ✔️     |   ❌   |  ✔️  |   ❌   |    ✔️     |
+|       [`pg_ulid`](https://github.com/iCyberon/pg_ulid)        |    Go    |    ✔️     |   ❌   |  ❌  |   ❌   |    ✔️     |
+|        [`pg_ulid`](https://github.com/RPG-18/pg_ulid)         |   C++    |    ✔️     | ⁉️[^1] |  ❌  |   ✔️   |    ❌     |
 
 [^1]: You can convert the [ulid][] into `uuid` or `bytea` and store it like that.
 [^2]: Supports casting indirectly through `bytea`.
 
 ## Why should I use ulid over uuid?
 
-This extension is approximately 30% faster than both `pgcrypto` uuid and `pg_uuidv7` uuidv7 when generating a million identifiers.
+This extension is approximately **30% faster** than both `pgcrypto`'s UUID and `pg_uuidv7`'s UUIDv7 when generating a million identifiers.
 
 <details>
 
@@ -64,9 +64,10 @@ ulid=# EXPLAIN ANALYSE SELECT gen_ulid() FROM generate_series(1, 1000000);
  Execution Time: 1098.086 ms
 (3 rows)
 ```
+
 </details>
 
-This extension is approximately 20% faster than both `pgcrypto` uuid and `pg_uuidv7` uuidv7 when generating and inserting a million identifiers.
+This extension is approximately **20% faster** than both `pgcrypto`'s UUID and `pg_uuidv7`'s UUIDv7 when generating and inserting a million identifiers.
 
 <details>
 
@@ -98,6 +99,7 @@ ulid=# EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate
  Execution Time: 1666.867 ms
 (4 rows)
 ```
+
 </details>
 
 ## Usage
@@ -127,7 +129,7 @@ Cast [ulid][] to timestamp:
 
 ```sql
 ALTER TABLE users
-ADD COLUMN created_at timestamp GENERATED ALWAYS AS id::timestamp STORED;
+ADD COLUMN created_at timestamp GENERATED ALWAYS AS (id::timestamp) STORED;
 ```
 
 ## Installation
@@ -136,9 +138,9 @@ Use [pgx][]. You can clone this repo and install this extension locally by follo
 
 You can also download relevant files from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
 
-
 <!-- omit from toc -->
 ## Contributors
+
 Here is a list of [Contributors](http://github.com/pksunkara/pgx_ulid/contributors)
 
 <!-- omit from toc -->
@@ -146,14 +148,17 @@ Here is a list of [Contributors](http://github.com/pksunkara/pgx_ulid/contributo
 
 <!-- omit from toc -->
 ## License
+
 MIT/X11
 
 <!-- omit from toc -->
 ## Bug Reports
+
 Report [here](http://github.com/pksunkara/pgx_ulid/issues).
 
 <!-- omit from toc -->
 ## Creator
+
 Pavan Kumar Sunkara (pavan.sss1991@gmail.com)
 
 Follow me on [github](https://github.com/users/follow?target=pksunkara), [twitter](http://twitter.com/pksunkara)
