@@ -21,7 +21,7 @@ impl InOutFuncs for ulid {
     {
         let val = input.to_str().unwrap();
         let inner = InnerUlid::from_string(val)
-            .expect(&format!("invalid input syntax for type ulid: \"{val}\""));
+            .unwrap_or_else(|err| panic!("invalid input syntax for type ulid: \"{val}\": {err}"));
 
         ulid(inner.0)
     }
@@ -106,7 +106,7 @@ mod tests {
 
     #[pg_test]
     fn test_null_to_ulid() {
-        let result = Spi::get_one::<ulid>(&format!("SELECT NULL::ulid;")).unwrap();
+        let result = Spi::get_one::<ulid>("SELECT NULL::ulid;").unwrap();
         assert_eq!(None, result);
     }
 
@@ -129,13 +129,13 @@ mod tests {
     }
 
     #[pg_test]
-    #[should_panic = "invalid input syntax for type ulid: \"01GV5PA9EQG7D82Q3Y4PKBZSY\": InvalidLength"]
+    #[should_panic = "invalid input syntax for type ulid: \"01GV5PA9EQG7D82Q3Y4PKBZSY\": invalid length"]
     fn test_string_to_ulid_invalid_length() {
         let _ = Spi::get_one::<ulid>("SELECT '01GV5PA9EQG7D82Q3Y4PKBZSY'::ulid;");
     }
 
     #[pg_test]
-    #[should_panic = "invalid input syntax for type ulid: \"01GV5PA9EQG7D82Q3Y4PKBZSYU\": InvalidChar"]
+    #[should_panic = "invalid input syntax for type ulid: \"01GV5PA9EQG7D82Q3Y4PKBZSYU\": invalid character"]
     fn test_string_to_ulid_invalid_char() {
         let _ = Spi::get_one::<ulid>("SELECT '01GV5PA9EQG7D82Q3Y4PKBZSYU'::ulid;");
     }
@@ -162,7 +162,7 @@ mod tests {
     #[pg_test]
     fn test_generate() {
         let result = Spi::get_one::<ulid>("SELECT gen_ulid();").unwrap();
-        assert_eq!(true, result.is_some());
+        assert!(result.is_some());
     }
 }
 

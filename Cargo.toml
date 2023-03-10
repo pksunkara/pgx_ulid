@@ -4,13 +4,13 @@ publish = false
 version = "0.1.0"
 
 edition      = "2021"
-rust-version = "1.67.0"
+rust-version = "1.68.0"
 
 [lib]
 crate-type = ["cdylib"]
 
 [features]
-default = ["pg13"]
+default = ["pg15"]
 pg11    = ["pgx-tests/pg11", "pgx/pg11"]
 pg12    = ["pgx-tests/pg12", "pgx/pg12"]
 pg13    = ["pgx-tests/pg13", "pgx/pg13"]

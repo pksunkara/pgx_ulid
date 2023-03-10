@@ -6,8 +6,15 @@ on:
     branches: [master]
     types: [opened, reopened, synchronize]
 jobs:
+  ci:
+    name: CI
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Done
+        run: exit 0
   test:
-    name: Tests & Lint
+    name: Tests
     strategy:
       fail-fast: false
       matrix:
@@ -23,7 +30,7 @@ jobs:
           profile: minimal
           toolchain: 1.68.0
           override: true
-          components: rustfmt, clippy
+          components: clippy
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
@@ -38,23 +45,39 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang libclang-dev llvm-dev gcc tree
 
           # Install requested postgres version
-          sudo apt install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }} -y
+          sudo apt-get install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }} -y
 
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
+          # Ensure user has access to installed postgres
+          sudo chown -R $USER:$USER /usr/lib/postgresql
+
           cargo install cargo-pgx --version 0.7.3 --locked
           cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+      - name: Test
+        run: |
+          cargo pgx test --no-default-features --features pg${{ matrix.postgres }}
       - name: Clippy check
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all --all-targets --all-features -- -D warnings
+          args: --all --all-targets --no-default-features --features pg${{ matrix.postgres }} -- -D warnings
+  lint:
+    name: Linting (fmt + clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.68.0
+          override: true
+          components: rustfmt, clippy
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Format check
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: -- --check
-      - name: Test
-        run: |
-          cargo pgx test pg${{ matrix.postgres }}
