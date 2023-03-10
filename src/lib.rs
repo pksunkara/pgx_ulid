@@ -6,8 +6,6 @@ use pgx::{
     rust_regtypein, StringInfo, Uuid,
 };
 
-// TODO: Why, CI, Packaging
-
 pgx::pg_module_magic!();
 
 #[allow(non_camel_case_types)]

@@ -146,6 +146,10 @@ Here is a list of [Contributors](http://github.com/pksunkara/pgx_ulid/contributo
 <!-- omit from toc -->
 ### TODO
 
+* Document why
+* CI
+* Packaging
+
 <!-- omit from toc -->
 ## License
 

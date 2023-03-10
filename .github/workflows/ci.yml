@@ -6,37 +6,24 @@ on:
     branches: [master]
     types: [opened, reopened, synchronize]
 jobs:
-  ci:
-    name: CI
-    needs: [test, lint]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Done
-        run: exit 0
   test:
-    name: Tests
+    name: Tests & Lint
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-    runs-on: ${{ matrix.os }}
+        postgres: [14, 15]
+        runner:
+          - ubuntu-latest
+          - buildjet-2vcpu-ubuntu-2204-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: 1.68.0
-          target: ${{ matrix.target }}
           override: true
-      - name: Install linker
-        if: matrix.target == 'i686-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install gcc-multilib
+          components: rustfmt, clippy
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install dependencies
@@ -58,22 +45,6 @@ jobs:
 
           cargo install cargo-pgx --version 0.7.3 --locked
           cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
-      - name: Test
-        run: |
-          cargo pgx test pg${{ matrix.postgres }}
-  lint:
-    name: Linting (fmt + clippy)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.68.0
-          override: true
-          components: rustfmt, clippy
-      - name: Checkout
-        uses: actions/checkout@v3
       - name: Clippy check
         uses: actions-rs/cargo@v1
         with:
@@ -84,3 +55,6 @@ jobs:
         with:
           command: fmt
           args: -- --check
+      - name: Test
+        run: |
+          cargo pgx test pg${{ matrix.postgres }}

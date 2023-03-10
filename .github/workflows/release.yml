@@ -30,12 +30,10 @@ jobs:
         box:
           - runner: ubuntu-latest
             arch: amd64
-          - runner: arm-runner
+          - runner: buildjet-2vcpu-ubuntu-2204-arm
             arch: arm64
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 45
-    env:
-      PKG_DIR: ${{ env.NAME }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -65,6 +63,12 @@ jobs:
 
           cargo install cargo-pgx --version 0.7.3 --locked
           cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+      - name: Set variables
+        id: vars
+        env:
+          PKG_DIR: ${{ env.NAME }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
+        shell: bash
+        run: echo "PKG_DIR=$PKG_DIR" >> $GITHUB_OUTPUT
       - name: Build artifacts
         run: |
           # selects the pgVer from pg_config on path
