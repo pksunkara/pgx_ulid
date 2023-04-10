@@ -1,10 +1,11 @@
 env:
   NAME: ulid
-  PKG_NAME: pgx_ulid
 name: Release
 on:
   push:
     tags: [v*]
+  pull_request:
+    branches: [master]
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
@@ -20,6 +21,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
+          draft: true
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
   build-linux-gnu:
@@ -27,10 +29,11 @@ jobs:
     needs:
       - create-release
     strategy:
+      fail-fast: false
       matrix:
         postgres: [14, 15]
         box:
-          - runner: ubuntu-latest
+          - runner: ubuntu-20.04
             arch: amd64
           - runner: buildjet-2vcpu-ubuntu-2204-arm
             arch: arm64
@@ -39,13 +42,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.68.0
-          target: ${{ matrix.target }}
-          override: true
       - name: Install dependencies
         run: |
           # Add postgres package repo
@@ -63,23 +59,28 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          # Ensure user has access to installed postgres
-          sudo chown -R $USER:$USER /usr/lib/postgresql
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.68.0 && \
+            rustup --version && \
+            rustc --version && \
+            cargo --version
+
+          # Ensure cargo/rust on path
+          source "$HOME/.cargo/env"
 
           cargo install cargo-pgx --version 0.7.3 --locked
           cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+
+          # selects the pgVer from pg_config on path
+          # https://github.com/tcdi/pgx/issues/288
+          cargo pgx package --no-default-features --features pg${{ matrix.postgres }}
       - name: Set variables
         id: vars
         env:
-          PKG_DIR: ${{ env.NAME }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
+          PKG_DIR: ${{ env.NAME }}-v0.1.0-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
         shell: bash
         run: echo "PKG_DIR=$PKG_DIR" >> $GITHUB_OUTPUT
       - name: Build artifacts
         run: |
-          # selects the pgVer from pg_config on path
-          # https://github.com/tcdi/pgx/issues/288
-          cargo pgx package --no-default-features --features pg${{ matrix.postgres }}
-
           # Create installable package
           mkdir archive
           cp `find target/release -type f -name "${{ env.NAME }}*"` archive
@@ -105,17 +106,17 @@ jobs:
           cd ../../../../../..
 
           # Create install control file
-          extension_version=${{ github.ref_name }}
+          extension_version=v0.1.0
           # strip the leading v
           deb_version=${extension_version:1}
 
           mkdir -p ${{ env.PKG_DIR }}/DEBIAN
           touch ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Package: ${{ env.PKG_NAME }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Package: ${{ env.NAME }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
           echo 'Version:' ${deb_version} >> ${{ env.PKG_DIR }}/DEBIAN/control
           echo 'Architecture: ${{ matrix.box.arch }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Maintainer: supabase' >> ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Description: A PostgreSQL extension' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Maintainer: Pavan Sunkara' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          echo 'Description: A PostgreSQL extension for ULID' >> ${{ env.PKG_DIR }}/DEBIAN/control
 
           # Create deb package
           sudo chown -R root:root ${{ env.PKG_DIR }}
