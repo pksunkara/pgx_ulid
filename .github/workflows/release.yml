@@ -1,5 +1,7 @@
 env:
-  NAME: ulid
+  NAME: pgx_ulid
+  EXT_NAME: ulid
+  PKG_NAME: pg-ulid
 name: Release
 on:
   push:
@@ -30,7 +32,7 @@ jobs:
       matrix:
         postgres: [14, 15]
         box:
-          - runner: ubuntu-latest
+          - runner: ubuntu-20.04
             arch: amd64
           - runner: buildjet-2vcpu-ubuntu-2204-arm
             arch: arm64
@@ -72,7 +74,7 @@ jobs:
 
           # Create installable package
           mkdir archive
-          cp `find target/release -type f -name "${{ env.NAME }}*"` archive
+          cp `find target/release -type f -name "${{ env.EXT_NAME }}*"` archive
 
           # Copy files into directory structure
           mkdir -p package/usr/lib/postgresql/lib
@@ -90,8 +92,8 @@ jobs:
           mkdir -p package/usr/share/postgresql/${{ matrix.postgres }}/extension
           cd package/usr/share/postgresql/${{ matrix.postgres }}/extension
 
-          cp -s ../../../../../var/lib/postgresql/extension/${{ env.NAME }}.control .
-          cp -s ../../../../../var/lib/postgresql/extension/${{ env.NAME }}*.sql .
+          cp -s ../../../../../var/lib/postgresql/extension/${{ env.EXT_NAME }}.control .
+          cp -s ../../../../../var/lib/postgresql/extension/${{ env.EXT_NAME }}*.sql .
           cd ../../../../../..
 
           # Create install control file
@@ -101,7 +103,7 @@ jobs:
 
           mkdir -p package/DEBIAN
           touch package/DEBIAN/control
-          echo 'Package: ${{ env.NAME }}' >> package/DEBIAN/control
+          echo 'Package: ${{ env.PKG_NAME }}' >> package/DEBIAN/control
           echo 'Version:' ${deb_version} >> package/DEBIAN/control
           echo 'Architecture: ${{ matrix.box.arch }}' >> package/DEBIAN/control
           echo 'Maintainer: Pavan Sunkara' >> package/DEBIAN/control
