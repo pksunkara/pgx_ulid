@@ -22,7 +22,10 @@ jobs:
       fail-fast: false
       matrix:
         postgres: [14, 15]
-    runs-on: ubuntu-latest
+        runner:
+          - ubuntu-latest
+          # - buildjet-2vcpu-ubuntu-2204-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
