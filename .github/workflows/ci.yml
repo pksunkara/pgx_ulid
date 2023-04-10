@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [master]
     types: [opened, reopened, synchronize]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   ci:
     name: CI
@@ -19,50 +22,14 @@ jobs:
       fail-fast: false
       matrix:
         postgres: [14, 15]
-        runner:
-          - ubuntu-latest
-          - buildjet-2vcpu-ubuntu-2204-arm
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.68.0
-          override: true
-          components: clippy
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install dependencies
-        run: |
-          # Add postgres package repo
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc &>/dev/null
-
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git build-essential libpq-dev curl libreadline6-dev zlib1g-dev pkg-config cmake
-          sudo apt-get install -y --no-install-recommends libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libxml2-utils xsltproc ccache
-          sudo apt-get install -y --no-install-recommends clang libclang-dev llvm-dev gcc tree
-
-          # Install requested postgres version
-          sudo apt-get install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }} -y
-
-          # Ensure installed pg_config is first on path
-          export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
-
-          # Ensure user has access to installed postgres
-          sudo chown -R $USER:$USER /usr/lib/postgresql
-
-          cargo install cargo-pgx --version 0.7.3 --locked
-          cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+      - name: Build
+        run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} -t test .
       - name: Test
-        run: |
-          cargo pgx test --no-default-features --features pg${{ matrix.postgres }}
-      - name: Clippy check
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all --all-targets --no-default-features --features pg${{ matrix.postgres }} -- -D warnings
+        run: docker run test cargo pgx test pg${{ matrix.postgres }}
   lint:
     name: Linting (fmt + clippy)
     runs-on: ubuntu-latest

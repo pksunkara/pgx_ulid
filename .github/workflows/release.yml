@@ -5,6 +5,8 @@ name: Release
 on:
   push:
     tags: [v*]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   create-release:
     name: Create release
