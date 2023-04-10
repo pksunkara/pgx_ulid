@@ -23,8 +23,8 @@ jobs:
       matrix:
         postgres: [14, 15]
         runner:
-          - ubuntu-latest
-          # - buildjet-2vcpu-ubuntu-2204-arm
+          - ubuntu-22.04
+          - buildjet-8vcpu-ubuntu-2204-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
