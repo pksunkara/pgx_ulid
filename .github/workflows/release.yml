@@ -32,9 +32,9 @@ jobs:
       matrix:
         postgres: [14, 15]
         box:
-          - runner: ubuntu-20.04
+          - runner: ubuntu-22.04
             arch: amd64
-          - runner: buildjet-8vcpu-ubuntu-2004-arm
+          - runner: buildjet-8vcpu-ubuntu-2204-arm
             arch: arm64
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 45
@@ -112,7 +112,7 @@ jobs:
           # Create deb package
           sudo chown -R root:root package
           sudo chmod -R 00755 package
-          sudo dpkg-deb --build --root-owner-group package
+          sudo dpkg-deb -Zxz --build --root-owner-group package
       - name: Upload artifacts
         uses: actions/upload-release-asset@v1
         env:
