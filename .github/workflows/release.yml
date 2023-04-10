@@ -1,6 +1,5 @@
 env:
   NAME: ulid
-  PKG_NAME: pgx_ulid
 name: Release
 on:
   push:
@@ -27,6 +26,7 @@ jobs:
     needs:
       - create-release
     strategy:
+      fail-fast: false
       matrix:
         postgres: [14, 15]
         box:
@@ -44,7 +44,6 @@ jobs:
         with:
           profile: minimal
           toolchain: 1.68.0
-          target: ${{ matrix.target }}
           override: true
       - name: Install dependencies
         run: |
@@ -63,17 +62,8 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          # Ensure user has access to installed postgres
-          sudo chown -R $USER:$USER /usr/lib/postgresql
-
           cargo install cargo-pgx --version 0.7.3 --locked
           cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
-      - name: Set variables
-        id: vars
-        env:
-          PKG_DIR: ${{ env.NAME }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
-        shell: bash
-        run: echo "PKG_DIR=$PKG_DIR" >> $GITHUB_OUTPUT
       - name: Build artifacts
         run: |
           # selects the pgVer from pg_config on path
@@ -85,20 +75,20 @@ jobs:
           cp `find target/release -type f -name "${{ env.NAME }}*"` archive
 
           # Copy files into directory structure
-          mkdir -p ${{ env.PKG_DIR }}/usr/lib/postgresql/lib
-          mkdir -p ${{ env.PKG_DIR }}/var/lib/postgresql/extension
-          cp archive/*.so ${{ env.PKG_DIR }}/usr/lib/postgresql/lib
-          cp archive/*.control ${{ env.PKG_DIR }}/var/lib/postgresql/extension
-          cp archive/*.sql ${{ env.PKG_DIR }}/var/lib/postgresql/extension
+          mkdir -p package/usr/lib/postgresql/lib
+          mkdir -p package/var/lib/postgresql/extension
+          cp archive/*.so package/usr/lib/postgresql/lib
+          cp archive/*.control package/var/lib/postgresql/extension
+          cp archive/*.sql package/var/lib/postgresql/extension
 
           # symlinks to Copy files into directory structure
-          mkdir -p ${{ env.PKG_DIR }}/usr/lib/postgresql/${{ matrix.postgres }}/lib
-          cd ${{ env.PKG_DIR }}/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          mkdir -p package/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          cd package/usr/lib/postgresql/${{ matrix.postgres }}/lib
           cp -s ../../lib/*.so .
           cd ../../../../../..
 
-          mkdir -p ${{ env.PKG_DIR }}/usr/share/postgresql/${{ matrix.postgres }}/extension
-          cd ${{ env.PKG_DIR }}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          mkdir -p package/usr/share/postgresql/${{ matrix.postgres }}/extension
+          cd package/usr/share/postgresql/${{ matrix.postgres }}/extension
 
           cp -s ../../../../../var/lib/postgresql/extension/${{ env.NAME }}.control .
           cp -s ../../../../../var/lib/postgresql/extension/${{ env.NAME }}*.sql .
@@ -109,24 +99,24 @@ jobs:
           # strip the leading v
           deb_version=${extension_version:1}
 
-          mkdir -p ${{ env.PKG_DIR }}/DEBIAN
-          touch ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Package: ${{ env.PKG_NAME }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Version:' ${deb_version} >> ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Architecture: ${{ matrix.box.arch }}' >> ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Maintainer: supabase' >> ${{ env.PKG_DIR }}/DEBIAN/control
-          echo 'Description: A PostgreSQL extension' >> ${{ env.PKG_DIR }}/DEBIAN/control
+          mkdir -p package/DEBIAN
+          touch package/DEBIAN/control
+          echo 'Package: ${{ env.NAME }}' >> package/DEBIAN/control
+          echo 'Version:' ${deb_version} >> package/DEBIAN/control
+          echo 'Architecture: ${{ matrix.box.arch }}' >> package/DEBIAN/control
+          echo 'Maintainer: Pavan Sunkara' >> package/DEBIAN/control
+          echo 'Description: A PostgreSQL extension for ULID' >> package/DEBIAN/control
 
           # Create deb package
-          sudo chown -R root:root ${{ env.PKG_DIR }}
-          sudo chmod -R 00755 ${{ env.PKG_DIR }}
-          sudo dpkg-deb --build --root-owner-group ${{ env.PKG_DIR }}
+          sudo chown -R root:root package
+          sudo chmod -R 00755 package
+          sudo dpkg-deb --build --root-owner-group package
       - name: Upload artifacts
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ env.PKG_DIR }}.deb
-          asset_name: ${{ env.PKG_DIR }}.deb
+          asset_path: ./package.deb
+          asset_name: ${{ env.NAME }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
           asset_content_type: application/vnd.debian.binary-package
