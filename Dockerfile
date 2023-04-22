@@ -30,16 +30,16 @@ RUN \
   rustc --version && \
   cargo --version
 
-# PGX
-RUN cargo install cargo-pgx --version 0.7.3 --locked
+# pgrx
+RUN cargo install cargo-pgrx --version 0.7.4 --locked
 
-RUN cargo pgx init --pg${PG_MAJOR} $(which pg_config)
+RUN cargo pgrx init --pg${PG_MAJOR} $(which pg_config)
 
 USER root
 
 COPY . .
 
-RUN cargo pgx install
+RUN cargo pgrx install
 
 RUN chown -R postgres:postgres /home/postgres
 RUN chown -R postgres:postgres /usr/share/postgresql/${PG_MAJOR}/extension

@@ -140,7 +140,7 @@ ADD COLUMN created_at timestamp GENERATED ALWAYS AS (id::timestamp) STORED;
 
 ## Installation
 
-Use [pgx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgx/blob/master/cargo-pgx/README.md#installing-your-extension-locally).
+Use [pgrx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
 
 You can also download relevant files from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
 
@@ -170,4 +170,4 @@ Pavan Kumar Sunkara (pavan.sss1991@gmail.com)
 Follow me on [github](https://github.com/users/follow?target=pksunkara), [twitter](http://twitter.com/pksunkara)
 
 [ulid]: https://github.com/ulid/spec
-[pgx]: https://github.com/tcdi/pgx
+[pgrx]: https://github.com/tcdi/pgrx

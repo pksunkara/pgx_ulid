@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} -t test .
       - name: Test
-        run: docker run test cargo pgx test pg${{ matrix.postgres }}
+        run: docker run test cargo pgrx test pg${{ matrix.postgres }}
   lint:
     name: Linting (fmt + clippy)
     runs-on: ubuntu-latest
