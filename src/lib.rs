@@ -1,12 +1,12 @@
 use core::ffi::CStr;
 use inner_ulid::Ulid as InnerUlid;
-use pgx::{
+use pgrx::{
     pg_sys::{Datum, Oid},
     prelude::*,
     rust_regtypein, StringInfo, Uuid,
 };
 
-pgx::pg_module_magic!();
+pgrx::pg_module_magic!();
 
 #[allow(non_camel_case_types)]
 #[derive(PostgresType, PostgresEq, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Ord)]
@@ -166,7 +166,7 @@ mod tests {
     }
 }
 
-/// This module is required by `cargo pgx test` invocations.
+/// This module is required by `cargo pgrx test` invocations.
 /// It must be visible at the root of your extension crate.
 #[cfg(test)]
 pub mod pg_test {

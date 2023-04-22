@@ -64,13 +64,13 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          cargo install cargo-pgx --version 0.7.3 --locked
-          cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+          cargo install cargo-pgrx --version 0.7.4 --locked
+          cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
       - name: Build artifacts
         run: |
           # selects the pgVer from pg_config on path
-          # https://github.com/tcdi/pgx/issues/288
-          cargo pgx package --no-default-features --features pg${{ matrix.postgres }}
+          # https://github.com/tcdi/pgrx/issues/288
+          cargo pgrx package --no-default-features --features pg${{ matrix.postgres }}
 
           # Create installable package
           mkdir archive
