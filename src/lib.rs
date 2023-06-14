@@ -1,12 +1,23 @@
 use core::ffi::CStr;
 use inner_ulid::Ulid as InnerUlid;
 use pgrx::{
+    pg_shmem_init,
     pg_sys::{Datum, Oid},
     prelude::*,
-    rust_regtypein, StringInfo, Uuid,
+    rust_regtypein,
+    shmem::*,
+    PgLwLock, StringInfo, Uuid,
 };
+use std::time::{Duration, SystemTime};
 
 pgrx::pg_module_magic!();
+
+static SHARED_ULID: PgLwLock<u128> = PgLwLock::new();
+
+#[pg_guard]
+pub extern "C" fn _PG_init() {
+    pg_shmem_init!(SHARED_ULID);
+}
 
 #[allow(non_camel_case_types)]
 #[derive(PostgresType, PostgresEq, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Ord)]
@@ -57,6 +68,25 @@ impl FromDatum for ulid {
 
         Some(ulid(u128::from_ne_bytes(len_bytes)))
     }
+}
+
+#[pg_extern]
+fn gen_monotonic_ulid() -> ulid {
+    let mut shared_bytes = SHARED_ULID.exclusive();
+    let shared_ulid = InnerUlid::from(*shared_bytes);
+    let new_ulid = if shared_ulid.is_nil()
+        || SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or(Duration::ZERO)
+            .as_millis()
+            > u128::from(shared_ulid.timestamp_ms())
+    {
+        InnerUlid::new()
+    } else {
+        shared_ulid.increment().unwrap()
+    };
+    *shared_bytes = u128::from(new_ulid);
+    ulid(*shared_bytes)
 }
 
 #[pg_extern]

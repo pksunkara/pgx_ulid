@@ -17,18 +17,19 @@ There are several different postgres extensions for [ulid][], but all of them ha
 - **Type**: A postgres type `ulid` which is displayed as [ulid][] text.
 - **Uuid**: Support for casting between UUID and [ulid][]
 - **Timestamp**: Support to cast an [ulid][] to a timestamp
+- **Monotonic**: Support [monotonicity][]
 
-|                             Name                              | Language | Generator | Binary | Type |  UUID  | Timestamp |
-| :-----------------------------------------------------------: | :------: | :-------: | :----: | :--: | :----: | :-------: |
-|      [`pgx_ulid`](https://github.com/pksunkara/pgx_ulid)      |   Rust   |    ✔️     |   ✔️   |  ✔️  |   ✔️   |    ✔️     |
-|       [`pgulid`](https://github.com/geckoboard/pgulid)        | PL/pgSQL |    ✔️     |   ❌   |  ❌  |   ❌   |    ❌     |
-|      [`pg_idkit`](https://github.com/VADOSWARE/pg_idkit)      |   Rust   |    ✔️     |   ❌   |  ❌  |   ❌   |    ❌     |
-|   [`uids-postgres`](https://github.com/spa5k/uids-postgres)   |   Rust   |    ✔️     | ⁉️[^1] |  ❌  | ⁉️[^2] |    ❌     |
-|    [`pgsql_ulid`](https://github.com/scoville/pgsql-ulid)     | PL/pgSQL |    ❌     | ⁉️[^1] |  ❌  |   ✔️   |    ❌     |
-|        [`pg-ulid`](https://github.com/edoceo/pg-ulid)         |    C     |    ✔️     |   ❌   |  ❌  |   ❌   |    ❌     |
-| [`ulid-postgres`](https://github.com/schinckel/ulid-postgres) | PL/pgSQL |    ✔️     |   ❌   |  ✔️  |   ❌   |    ✔️     |
-|       [`pg_ulid`](https://github.com/iCyberon/pg_ulid)        |    Go    |    ✔️     |   ❌   |  ❌  |   ❌   |    ✔️     |
-|        [`pg_ulid`](https://github.com/RPG-18/pg_ulid)         |   C++    |    ✔️     | ⁉️[^1] |  ❌  |   ✔️   |    ❌     |
+|                             Name                              | Language | Generator | Binary | Type |  UUID  | Timestamp | Monotonic |
+| :-----------------------------------------------------------: | :------: | :-------: | :----: | :--: | :----: | :-------: | :-------: |
+|      [`pgx_ulid`](https://github.com/pksunkara/pgx_ulid)      |   Rust   |    ✔️      |   ✔️    |  ✔️   |   ✔️    |    ✔️      |    ✔️      |
+|       [`pgulid`](https://github.com/geckoboard/pgulid)        | PL/pgSQL |    ✔️      |   ❌   |  ❌  |   ❌   |    ❌     |    ❌     |
+|      [`pg_idkit`](https://github.com/VADOSWARE/pg_idkit)      |   Rust   |    ✔️      |   ❌   |  ❌  |   ❌   |    ❌     |    ❌     |
+|   [`uids-postgres`](https://github.com/spa5k/uids-postgres)   |   Rust   |    ✔️      | ⁉️[^1]  |  ❌  | ⁉️[^2]  |    ❌     |    ❌     |
+|    [`pgsql_ulid`](https://github.com/scoville/pgsql-ulid)     | PL/pgSQL |    ❌     | ⁉️[^1]  |  ❌  |   ✔️    |    ❌     |    ❌     |
+|        [`pg-ulid`](https://github.com/edoceo/pg-ulid)         |    C     |    ✔️      |   ❌   |  ❌  |   ❌   |    ❌     |    ❌     |
+| [`ulid-postgres`](https://github.com/schinckel/ulid-postgres) | PL/pgSQL |    ✔️      |   ❌   |  ✔️   |   ❌   |    ✔️      |    ❌     |
+|       [`pg_ulid`](https://github.com/iCyberon/pg_ulid)        |    Go    |    ✔️      |   ❌   |  ❌  |   ❌   |    ✔️      |    ❌     |
+|        [`pg_ulid`](https://github.com/RPG-18/pg_ulid)         |   C++    |    ✔️      | ⁉️[^1]  |  ❌  |   ✔️    |    ❌     |    ❌     |
 
 [^1]: You can convert the [ulid][] into `uuid` or `bytea` and store it like that.
 [^2]: Supports casting indirectly through `bytea`.
@@ -37,7 +38,7 @@ There are several different postgres extensions for [ulid][], but all of them ha
 
 The main advantages are:
 
-* Indexes created over ULIDs are less fragmented compared to UUIDs due to the timestamp that was encoded in the ULID when it was created.
+* Indexes created over ULIDs are less fragmented compared to UUIDs due to the timestamp and [monotonicity][] that was encoded in the ULID when it was created.
 * ULIDs don't use special characters, so they can be used in URLs or even HTML.
 * ULIDs are shorter than UUIDs as they are comprised of 26 characters compared to UUIDs' 36 characters.
 
@@ -108,6 +109,30 @@ ulid=# EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate
 
 </details>
 
+## Monotonicity
+
+This extension supports [monotonicity][] through `gen_monotonic_ulid()` function. To achive this it uses PostgreSQL's shared memory and LWLock to store last generated ULID.
+
+Pros:
+
+1. Monotonic ULIDs are better for indexing, as they are sorted by default.
+
+2. Monotonic ULIDs slightly faster than `gen_ulid()` when generating lots of ULIDs within one millisecond. Because, in this case, there is no need to generate random component of ULID. Instead it is just incremented.
+
+Cons:
+
+1. Previously generated ULID is saved in shmem and accessed via LWLock. i.e. it is exclusive for function invocation within database. Theoretically this can lead to slowdowns.
+
+   *...But, in practice (at least in my testing) `gen_monotonic_ulid()` is slightly faster than `gen_ulid()` (see Pros.2).*
+
+2. Extensions that use shared memory must be loaded via `postgresql.conf`'s `shared_preload_libraries` configuration setting.
+
+   *...But, it only affects `gen_monotonic_ulid()` function. Other functions of this extension will work normally even without this config.*
+
+3. Monotonic ULIDs may overflow and throw an error.
+
+   *...But, chances are negligible.*
+
 ## Usage
 
 Use the extension in the database:
@@ -121,6 +146,15 @@ Create a table with [ulid][] as a primary key:
 ```sql
 CREATE TABLE users (
   id ulid NOT NULL DEFAULT gen_ulid() PRIMARY KEY,
+  name text NOT NULL
+);
+```
+
+Or, create a table with [monotonic][monotonicity] [ulid][] as a primary key:
+
+```sql
+CREATE TABLE users (
+  id ulid NOT NULL DEFAULT gen_monotonic_ulid() PRIMARY KEY,
   name text NOT NULL
 );
 ```
@@ -143,6 +177,12 @@ ADD COLUMN created_at timestamp GENERATED ALWAYS AS (id::timestamp) STORED;
 Use [pgrx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
 
 You can also download relevant files from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
+
+To be able to use [monotonic][monotonicity] [ulid][]'s it is necessary to add this extension to `postgresql.conf`'s `shared_preload_libraries` configuration setting.
+
+```conf
+shared_preload_libraries = 'ulid'	# (change requires restart)
+```
 
 <!-- omit from toc -->
 ## Contributors
@@ -171,3 +211,4 @@ Follow me on [github](https://github.com/users/follow?target=pksunkara), [twitte
 
 [ulid]: https://github.com/ulid/spec
 [pgrx]: https://github.com/tcdi/pgrx
+[monotonicity]: https://github.com/ulid/spec#monotonicity
