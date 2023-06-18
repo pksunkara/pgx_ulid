@@ -80,8 +80,8 @@ fn ulid_to_uuid(input: ulid) -> Uuid {
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_to_timestamp(input: ulid) -> Timestamp {
-    // 946688400000 is the number of milliseconds between 1970-01-01 and 2000-01-01
-    let inner = InnerUlid(input.0).timestamp_ms() as i64 - 946_688_400_000;
+    // 946684800000 is the number of milliseconds between 1970-01-01 and 2000-01-01
+    let inner = InnerUlid(input.0).timestamp_ms() as i64 - 946_684_800_000;
     Timestamp::try_from(inner * 1000).unwrap()
 }
 
