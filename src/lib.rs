@@ -102,7 +102,7 @@ mod tests {
     const INT: u128 = 2029121117734015635515926905565997019;
     const TEXT: &str = "01GV5PA9EQG7D82Q3Y4PKBZSYV";
     const UUID: &str = "0186cb65-25d7-81da-815c-7e25a6bfe7db";
-    const TIMESTAMP: &str = "2023-03-10 11:00:49.111";
+    const TIMESTAMP: &str = "2023-03-10 12:00:49.111";
 
     #[pg_test]
     fn test_null_to_ulid() {
