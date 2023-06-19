@@ -80,8 +80,8 @@ fn ulid_to_uuid(input: ulid) -> Uuid {
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_to_timestamp(input: ulid) -> Timestamp {
-    // 946688400000 is the number of milliseconds between 1970-01-01 and 2000-01-01
-    let inner = InnerUlid(input.0).timestamp_ms() as i64 - 946_688_400_000;
+    // 946684800000 is the number of milliseconds between 1970-01-01 and 2000-01-01
+    let inner = InnerUlid(input.0).timestamp_ms() as i64 - 946_684_800_000;
     Timestamp::try_from(inner * 1000).unwrap()
 }
 
@@ -102,7 +102,7 @@ mod tests {
     const INT: u128 = 2029121117734015635515926905565997019;
     const TEXT: &str = "01GV5PA9EQG7D82Q3Y4PKBZSYV";
     const UUID: &str = "0186cb65-25d7-81da-815c-7e25a6bfe7db";
-    const TIMESTAMP: &str = "2023-03-10 11:00:49.111";
+    const TIMESTAMP: &str = "2023-03-10 12:00:49.111";
 
     #[pg_test]
     fn test_null_to_ulid() {
