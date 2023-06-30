@@ -42,11 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.68.0
-          override: true
+        uses: dtolnay/rust-toolchain@1.70.0
       - name: Install dependencies
         run: |
           # Add postgres package repo
@@ -64,7 +60,7 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          cargo install cargo-pgrx --version 0.7.4 --locked
+          cargo install cargo-pgrx --version 0.9.7 --locked
           cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
       - name: Build artifacts
         run: |

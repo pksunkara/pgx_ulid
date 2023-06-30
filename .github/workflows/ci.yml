@@ -38,11 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@1.70.0
         with:
-          profile: minimal
-          toolchain: 1.68.0
-          override: true
           components: rustfmt, clippy
       - name: Checkout
         uses: actions/checkout@v3

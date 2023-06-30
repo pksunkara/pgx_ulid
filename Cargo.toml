@@ -4,7 +4,7 @@ publish = false
 version = "0.1.0"
 
 edition      = "2021"
-rust-version = "1.68.0"
+rust-version = "1.70.0"
 
 [lib]
 crate-type = ["cdylib"]
@@ -20,10 +20,10 @@ pg_test = []
 
 [dependencies]
 inner_ulid = { package = "ulid", version = "1.0.0" }
-pgrx       = "=0.7.4"
+pgrx       = "=0.9.7"
 
 [dev-dependencies]
-pgrx-tests = "=0.7.4"
+pgrx-tests = "=0.9.7"
 
 [profile.dev]
 panic = "unwind"
