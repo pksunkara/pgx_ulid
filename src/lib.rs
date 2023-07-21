@@ -20,7 +20,7 @@ pub extern "C" fn _PG_init() {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(PostgresType, PostgresEq, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(PostgresType, PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord)]
 #[inoutfuncs]
 pub struct ulid(u128);
 
