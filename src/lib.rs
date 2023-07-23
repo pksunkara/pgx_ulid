@@ -194,6 +194,143 @@ mod tests {
         let result = Spi::get_one::<ulid>("SELECT gen_ulid();").unwrap();
         assert!(result.is_some());
     }
+    #[pg_test]
+    fn test_join() {
+        let result = Spi::get_one::<ulid>("CREATE TABLE foo (
+                id ulid DEFAULT gen_ulid()
+                ,data TEXT
+            );
+
+            CREATE TABLE foobar (
+                id ulid DEFAULT gen_ulid()
+                ,foo_id ulid
+            );
+
+            INSERT INTO foo
+            	(data)
+            VALUES 
+            	('hello')
+            	,('world');
+
+            INSERT INTO foobar
+            	(foo_id) 
+            VALUES
+            	((SELECT id FROM foo WHERE data = 'hello'))
+            	,((SELECT id FROM foo WHERE data = 'world'));
+
+            SELECT 
+            	foobar.id
+            	, foo.data 
+            FROM foobar
+            JOIN foo ON foobar.foo_id = foo.id;"
+        ).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[pg_test]
+    fn test_many_to_many() {
+        let result = Spi::get_one::<ulid>("CREATE TABLE foo (
+                id ulid DEFAULT gen_ulid() PRIMARY KEY
+                ,data TEXT
+            );
+
+            CREATE TABLE bar (
+                id ulid DEFAULT gen_ulid() PRIMARY KEY
+                ,data TEXT
+            );
+
+            CREATE TABLE foo_bar_mapping (
+                foo_id ulid,
+                bar_id ulid,
+                PRIMARY KEY (foo_id, bar_id),
+                FOREIGN KEY (foo_id) REFERENCES foo(id),
+                FOREIGN KEY (bar_id) REFERENCES bar(id)
+            );
+
+            INSERT INTO foo
+                (data)
+            VALUES
+                ('hello')
+                ,('world');
+
+            INSERT INTO bar
+                (data)
+            VALUES
+                ('alpha')
+                ,('beta');
+
+            INSERT INTO foo_bar_mapping
+                (foo_id, bar_id)
+            VALUES
+                ((SELECT id FROM foo WHERE data = 'hello'), (SELECT id FROM bar WHERE data = 'alpha')),
+                ((SELECT id FROM foo WHERE data = 'world'), (SELECT id FROM bar WHERE data = 'beta'));
+
+            SELECT
+                f.id as foo_id
+                , b.id as bar_id
+                , f.data as foo_data
+                , b.data as bar_data
+            FROM foo_bar_mapping fbm
+            JOIN foo f ON fbm.foo_id = f.id
+            JOIN bar b ON fbm.bar_id = b.id;"
+        ).unwrap();
+        assert!(result.is_some());
+    }
+
+    #[pg_test]
+    fn test_commutator() {
+        let result = Spi::get_one::<ulid>("CREATE TABLE foo (
+                id ulid DEFAULT gen_ulid() PRIMARY KEY
+                ,data TEXT
+            );
+
+            CREATE TABLE bar (
+                id ulid DEFAULT gen_ulid() PRIMARY KEY
+                ,data TEXT
+            );
+
+            CREATE TABLE foo_bar_mapping (
+                foo_id ulid,
+                bar_id ulid,
+                PRIMARY KEY (foo_id, bar_id),
+                FOREIGN KEY (foo_id) REFERENCES foo(id),
+                FOREIGN KEY (bar_id) REFERENCES bar(id)
+            );
+
+            INSERT INTO foo
+                (data)
+            VALUES
+                ('hello')
+                ,('world');
+
+            INSERT INTO bar
+                (data)
+            VALUES
+                ('alpha')
+                ,('beta');
+
+            INSERT INTO foo_bar_mapping
+                (foo_id, bar_id)
+            VALUES
+                ((SELECT id FROM foo WHERE data = 'hello'), (SELECT id FROM bar WHERE data = 'alpha')),
+                ((SELECT id FROM foo WHERE data = 'world'), (SELECT id FROM bar WHERE data = 'beta'));
+
+            SELECT
+                f.id as foo_id
+                , b.id as bar_id
+                , f.data as foo_data
+                , b.data as bar_data
+            FROM foo_bar_mapping fbm
+            JOIN foo f ON fbm.foo_id = f.id
+            JOIN bar b ON fbm.bar_id = b.id;        
+                        SELECT
+                *
+            FROM foo_bar_mapping
+            Join foo on  foo_bar_mapping.foo_id = foo.id
+            WHERE foo_bar_mapping.bar_id IN (SELECT id FROM bar);"
+        ).unwrap();
+        assert!(result.is_some());
+    }
 }
 
 /// This module is required by `cargo pgrx test` invocations.
