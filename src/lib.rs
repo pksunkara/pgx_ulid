@@ -20,7 +20,9 @@ pub extern "C" fn _PG_init() {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(PostgresType, PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord)]
+#[derive(
+    PostgresType, PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord,
+)]
 #[inoutfuncs]
 pub struct ulid(u128);
 
@@ -193,6 +195,48 @@ mod tests {
     fn test_generate() {
         let result = Spi::get_one::<ulid>("SELECT gen_ulid();").unwrap();
         assert!(result.is_some());
+    }
+
+    #[pg_test]
+    fn test_hash() {
+        Spi::run(
+            "CREATE TABLE foo (
+                id ulid,
+                data TEXT
+            );
+
+            CREATE TABLE bar (
+                id ulid,
+                foo_id ulid
+            );
+
+            INSERT INTO foo DEFAULT VALUES;
+            INSERT INTO bar DEFAULT VALUES;
+
+            SELECT *
+            FROM bar
+            JOIN foo ON bar.id = foo.id;",
+        )
+        .unwrap();
+    }
+
+    #[pg_test]
+    fn test_commutator() {
+        Spi::run(
+            "CREATE TABLE foo (
+                id ulid,
+                data TEXT
+            );
+
+            CREATE TABLE bar (
+                id ulid
+            );
+
+            SELECT *
+            FROM bar
+            JOIN foo ON bar.id = foo.id;",
+        )
+        .unwrap();
     }
 }
 
