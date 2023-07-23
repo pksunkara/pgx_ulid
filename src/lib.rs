@@ -194,6 +194,25 @@ mod tests {
         let result = Spi::get_one::<ulid>("SELECT gen_ulid();").unwrap();
         assert!(result.is_some());
     }
+
+    #[pg_test]
+    fn test_commutator() {
+        Spi::run(
+            "CREATE TABLE foo (
+                id ulid,
+                data TEXT
+            );
+
+            CREATE TABLE bar (
+                id ulid
+            );
+
+            SELECT *
+            FROM bar
+            JOIN foo ON bar.id = foo.id;",
+        )
+        .unwrap();
+    }
 }
 
 /// This module is required by `cargo pgrx test` invocations.
