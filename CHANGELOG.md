@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+### Bug fixes
+* Fixed bugs regarding table joins for the type
+
 ## 0.1.1
 
 #### Enhancements
