@@ -25,13 +25,13 @@ RUN chown postgres:postgres /home/postgres
 USER postgres
 
 RUN \
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.70.0 && \
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.71.1 && \
   rustup --version && \
   rustc --version && \
   cargo --version
 
 # pgrx
-RUN cargo install cargo-pgrx --version 0.9.7 --locked
+RUN cargo install cargo-pgrx --version 0.10.0-beta.4 --locked
 
 RUN cargo pgrx init --pg${PG_MAJOR} $(which pg_config)
 
