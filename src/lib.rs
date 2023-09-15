@@ -147,7 +147,6 @@ mod tests {
     const TEXT: &str = "01GV5PA9EQG7D82Q3Y4PKBZSYV";
     const UUID: &str = "0186cb65-25d7-81da-815c-7e25a6bfe7db";
     const TIMESTAMP: &str = "2023-03-10 12:00:49.111";
-    const TIMESTAMP_ULID_PREFIX: &str = "01GV5PA9EQ0000000000000000";
 
 
     #[pg_test]
@@ -197,7 +196,7 @@ mod tests {
     fn test_timestamp_to_ulid() {
         let result =
             Spi::get_one::<&str>(&format!("SELECT '{TIMESTAMP}'::timestamp::ulid::text;")).unwrap();
-        assert_eq!(Some(TIMESTAMP_ULID_PREFIX), result);
+        assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
     }
 
     #[pg_test]
