@@ -117,11 +117,27 @@ fn ulid_to_timestamp(input: ulid) -> Timestamp {
     Timestamp::try_from(inner * 1000).unwrap()
 }
 
+#[pg_extern(immutable, parallel_safe)]
+fn timestamp_to_ulid(input: Timestamp) -> ulid {
+    let epoch: f64 = input
+        .extract_part(DateTimeParts::Epoch)
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    let milliseconds = (epoch * 1000.0) as u64;
+
+    let inner = InnerUlid::from_parts(milliseconds, 0);
+
+    ulid(inner.0)
+}
+
 extension_sql!(
     r#"
 CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
 CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
+CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
 "#,
     name = "ulid_casts"
 );
@@ -177,6 +193,13 @@ mod tests {
         let result =
             Spi::get_one::<&str>(&format!("SELECT '{TEXT}'::ulid::timestamp::text;")).unwrap();
         assert_eq!(Some(TIMESTAMP), result);
+    }
+
+    #[pg_test]
+    fn test_timestamp_to_ulid() {
+        let result =
+            Spi::get_one::<&str>(&format!("SELECT '{TIMESTAMP}'::timestamp::ulid::text;")).unwrap();
+        assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
     }
 
     #[pg_test]
