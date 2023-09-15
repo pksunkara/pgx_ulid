@@ -119,7 +119,11 @@ fn ulid_to_timestamp(input: ulid) -> Timestamp {
 
 #[pg_extern(immutable, parallel_safe)]
 fn timestamp_to_ulid(input: Timestamp) -> ulid {
-    let epoch: f64 = input.extract_part(DateTimeParts::Epoch).unwrap().try_into().unwrap();
+    let epoch: f64 = input
+        .extract_part(DateTimeParts::Epoch)
+        .unwrap()
+        .try_into()
+        .unwrap();
 
     let milliseconds = (epoch * 1000.0) as u64;
 
@@ -147,7 +151,6 @@ mod tests {
     const TEXT: &str = "01GV5PA9EQG7D82Q3Y4PKBZSYV";
     const UUID: &str = "0186cb65-25d7-81da-815c-7e25a6bfe7db";
     const TIMESTAMP: &str = "2023-03-10 12:00:49.111";
-
 
     #[pg_test]
     fn test_null_to_ulid() {
