@@ -226,6 +226,13 @@ ALTER TABLE users
 ADD COLUMN created_at timestamp GENERATED ALWAYS AS (id::timestamp) STORED;
 ```
 
+Cast timestamp to [ulid][]:
+
+```sql
+-- gets all users where the ID was created on 2023-09-15, without using another column and taking advantage of the index
+SELECT * FROM users WHERE id BETWEEN timestamp_to_ulid('2023-09-15') AND '2023-09-16'::timestamp::ulid;
+```
+
 ## Installation
 
 Use [pgrx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
