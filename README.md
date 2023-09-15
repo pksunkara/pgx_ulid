@@ -226,7 +226,7 @@ ALTER TABLE users
 ADD COLUMN created_at timestamp GENERATED ALWAYS AS (id::timestamp) STORED;
 ```
 
-Cast timestamp to [ulid][]:
+Cast timestamp to [ulid][], this generates a zeroed ULID with the timestamp prefixed (TTTTTTTTTT0000000000000000):
 
 ```sql
 -- gets all users where the ID was created on 2023-09-15, without using another column and taking advantage of the index
