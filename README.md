@@ -230,7 +230,7 @@ Cast timestamp to [ulid][], this generates a zeroed ULID with the timestamp pref
 
 ```sql
 -- gets all users where the ID was created on 2023-09-15, without using another column and taking advantage of the index
-SELECT * FROM users WHERE id BETWEEN timestamp_to_ulid('2023-09-15') AND '2023-09-16'::timestamp::ulid;
+SELECT * FROM users WHERE id BETWEEN '2023-09-15'::timestamp::ulid AND '2023-09-16'::timestamp::ulid;
 ```
 
 ## Installation
