@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+#### Enhancements
+* Added support for casting a timestamp to ulid
+
 ## 0.1.2
 
 ### Bug fixes
