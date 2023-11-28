@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+* with a timezone issue with unit tests
+* upgrade prgx to 0.11.1
+
 ## 0.1.3
 
 #### Enhancements
