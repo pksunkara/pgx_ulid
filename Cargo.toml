@@ -10,7 +10,7 @@ rust-version = "1.70.0"
 crate-type = ["cdylib"]
 
 [features]
-default = ["pg15"]
+default = ["pg16"]
 pg11    = ["pgrx-tests/pg11", "pgrx/pg11"]
 pg12    = ["pgrx-tests/pg12", "pgrx/pg12"]
 pg13    = ["pgrx-tests/pg13", "pgrx/pg13"]
@@ -21,10 +21,10 @@ pg_test = []
 
 [dependencies]
 inner_ulid = { package = "ulid", version = "1.0.0" }
-pgrx       = "=0.10.2"
+pgrx       = "=0.11.1"
 
 [dev-dependencies]
-pgrx-tests = "=0.10.2"
+pgrx-tests = "=0.11.1"
 
 [profile.dev]
 panic = "unwind"
