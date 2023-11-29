@@ -1,2 +1,2 @@
 all:
-	 docker build --build-arg="PG_MAJOR=16" .
+	 docker build -t mypsql --build-arg="PG_MAJOR=16" .

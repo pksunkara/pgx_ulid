@@ -200,7 +200,18 @@ ulid=# EXPLAIN ANALYZE INSERT INTO users (name) SELECT 'Client 2' FROM generate_
 
 ## Installation
 
+The extension consist of 3 files
 
+1. **ulid--0.1.4.sql** & **ulid.control** - the extension configuration file, to deploy in SHAREDIR
+2. **ulid.so** - the extension itself, to deploy in LIBDIR
+
+edit postgresql.conf, add the following line
+
+```conf
+shared_preload_libraries = 'ulid'	# (change requires restart)
+```
+
+> Note: None of these configuration are required if you use the custom docker image
 
 ## Usage
 
@@ -268,7 +279,7 @@ They are indeed very similar at first sight, but the dates have different meanin
 * First an index of a date column will be faster than on a random-date-ordered guid.
 * Shit happens - loss of data, code mistakes, migrations - you may have to change one of these dates without impacting the other.
 * You may decide to create ULIDs asynchronously or in advence, therefore dissociating generation from record creation.
-* In the end they are two different things: the **id's** creation date vs the **record's** creation date.
+* In the end they are two different things: the **id's** creation date vs the **record's** creation date. Typically, in IT we get much better results when we split concerns.
 
 ## Building
 

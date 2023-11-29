@@ -38,18 +38,21 @@ RUN cargo install cargo-pgrx --version 0.11.1 --locked
 RUN cargo pgrx init --pg${PG_MAJOR} $(which pg_config)
 
 # Compile as ROOT to avoid a permission denied when copying to /usr/share/postgresql
-USER root
+# USER root
 
 COPY . .
 
 RUN cargo pgrx package
 
+
 # RUN chown -R postgres:postgres /home/postgres
 # RUN chown -R postgres:postgres /usr/share/postgresql/${PG_MAJOR}/extension
 # RUN chown -R postgres:postgres /usr/lib/postgresql/${PG_MAJOR}/lib
 
-# # multi-stage - let's start clean
-# FROM postgres:${PG_MAJOR}
+# multi-stage - let's start clean
+FROM postgres:${PG_MAJOR}
+
+COPY --from=build /home/postgres/target/release/ulid-pg${PG_MAJOR}/ /
 
 # # COPY --from=build /home/postgres/${PG_MAJOR}/extension/ulid.control /home/postgres/${PG_MAJOR}/extension/ulid.control
 # COPY --from=build /usr/share/postgresql/${PG_MAJOR}/extension/ulid*.* /usr/share/postgresql/${PG_MAJOR}/extension/
@@ -57,5 +60,8 @@ RUN cargo pgrx package
 # # why? convenient, but should stick to upstream behaviors.
 # USER postgres
 # # allow deployment without a password
-# ENV POSTGRES_HOST_AUTH_METHOD=trust
-# ENV USER=postgres
+ENV POSTGRES_HOST_AUTH_METHOD=trust
+ENV USER=postgres
+
+# add comma for more shared_preload_libraries=A,B,C
+CMD ["postgres","-c","shared_preload_libraries=ulid"]
