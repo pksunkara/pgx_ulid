@@ -190,14 +190,14 @@ mod tests {
     #[pg_test]
     fn test_ulid_to_timestamp() {
         let result =
-            Spi::get_one::<&str>(&format!("SELECT '{TEXT}'::ulid::timestamp::text;")).unwrap();
+            Spi::get_one::<&str>(&format!("set timezone TO 'UTC'; SELECT '{TEXT}'::ulid::timestamp::text;")).unwrap();
         assert_eq!(Some(TIMESTAMP), result);
     }
 
     #[pg_test]
     fn test_timestamp_to_ulid() {
         let result =
-            Spi::get_one::<&str>(&format!("SELECT '{TIMESTAMP}'::timestamp::ulid::text;")).unwrap();
+            Spi::get_one::<&str>(&format!("set timezone TO 'UTC'; SELECT '{TIMESTAMP}'::timestamp::ulid::text;")).unwrap();
         assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
     }
 
