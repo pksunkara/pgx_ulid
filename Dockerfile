@@ -53,6 +53,7 @@ RUN cargo pgrx package
 FROM postgres:${PG_MAJOR}
 
 COPY --from=build /home/postgres/target/release/ulid-pg${PG_MAJOR}/ /
+COPY --from=build /home/postgres/install-extensions.sql /docker-entrypoint-initdb.d
 
 # # COPY --from=build /home/postgres/${PG_MAJOR}/extension/ulid.control /home/postgres/${PG_MAJOR}/extension/ulid.control
 # COPY --from=build /usr/share/postgresql/${PG_MAJOR}/extension/ulid*.* /usr/share/postgresql/${PG_MAJOR}/extension/
@@ -64,4 +65,4 @@ ENV POSTGRES_HOST_AUTH_METHOD=trust
 ENV USER=postgres
 
 # add comma for more shared_preload_libraries=A,B,C
-CMD ["postgres","-c","shared_preload_libraries=ulid"]
+# CMD ["postgres","-c","shared_preload_libraries=ulid"]
