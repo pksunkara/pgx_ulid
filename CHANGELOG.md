@@ -1,8 +1,10 @@
 # Changelog
 
 ## 0.1.4
-* with a timezone issue with unit tests
-* upgrade prgx to 0.11.1
+* With a timezone issue with unit tests
+* Upgrade prgx to 0.11.1
+* Rework Dockerfile
+* Improve README
 
 ## 0.1.3
 
