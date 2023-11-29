@@ -6,14 +6,18 @@ A postgres extension to support [ulid][].
 1. [Why should I use this?](#why-should-i-use-this)
 2. [Why should I use ulid over uuid?](#why-should-i-use-ulid-over-uuid)
 3. [Monotonicity](#monotonicity)
-4. [Usage](#usage)
-5. [Installation](#installation)
+4. [Installation](#installation)
+5. [Usage](#usage)
+6. [Recommendation](#recommendation)
+7. [Building](#building)
 
 ## Why should I use this?
 
+The use of GUID in a database is a trade off between performance and security. GUIDs are typically used in OLTP to get around id predictability and distributed scalability. 
+
 There are several different postgres extensions for [ulid][], but all of them have feature gaps. A good extension should have:
 
-- **Generator**: A generator function to generate [ulid][] identifiers.
+- **Generator**: A generator function to generate [ulid][] identifiers. crypto secure as it uses rand::thread_rng()
 - **Binary**: Data be stored as binary and not text.
 - **Type**: A postgres type `ulid` which is displayed as [ulid][] text.
 - **Uuid**: Support for casting between UUID and [ulid][]
@@ -35,15 +39,20 @@ There are several different postgres extensions for [ulid][], but all of them ha
 [^1]: You can convert the [ulid][] into `uuid` or `bytea` and store it like that.
 [^2]: Supports casting indirectly through `bytea`.
 
-## Why should I use ulid over uuid?
+## Why should I use ULID over UUID?
 
-The main advantages are:
+The main advantages of ULID are:
 
-* Indexes created over ULIDs are less fragmented compared to UUIDs due to the timestamp and [monotonicity][] that was encoded in the ULID when it was created.
+* Indexes generated using ULIDs exhibit lower fragmentation compared to UUIDs thanks to the encoded timestamp and monotonicity.
+* ULID are K-ordered, which means you can used to sort the column by time order
 * ULIDs don't use special characters, so they can be used in URLs or even HTML.
 * ULIDs are shorter than UUIDs as they are comprised of 26 characters compared to UUIDs' 36 characters.
+* ULID are more secure than UUIDv7, their randomness is 80 bits as opposed to 62 bits.
+* UUID v1/v2 is impractical in many environments, as it requires access to a unique, stable MAC address
+* UUID v3/v5 requires a unique seed and produces randomly distributed IDs, which can cause fragmentation in many data structures
+* UUID v4 provides no other information than randomness which can cause fragmentation in many data structures
 
-This extension is approximately **30% faster** than both `pgcrypto`'s UUID and `pg_uuidv7`'s UUIDv7 when generating a million identifiers.
+This extension is approximately **30% faster** than both `pgcrypto`'s UUID and `pg_uuidv7`'s UUIDv7 when generating a million identifiers while leveraging a crypto secure random generator.
 
 <details>
 
@@ -111,6 +120,8 @@ ulid=# EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate
 </details>
 
 ## Monotonicity
+
+Monotony ensures guarantees k-sorting order on the same postgres instance.
 
 This extension supports [monotonicity][] through `gen_monotonic_ulid()` function. To achive this, it uses PostgreSQL's shared memory and LWLock to store last generated ULID.
 
@@ -187,12 +198,29 @@ ulid=# EXPLAIN ANALYZE INSERT INTO users (name) SELECT 'Client 2' FROM generate_
 
     *...But, chances are negligible.*
 
+## Installation
+
+
+
 ## Usage
 
 Use the extension in the database:
 
 ```sql
 CREATE EXTENSION ulid;
+```
+
+Test Generation speed
+
+```SQL
+# gen
+EXPLAIN ANALYSE SELECT gen_ulid() FROM generate_series(1, 1000000);
+# gen and insert
+EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate_series(1, 1000000);
+
+# same as above but monotonic
+EXPLAIN ANALYSE SELECT gen_monotonic_ulid() FROM generate_series(1, 1000000);
+EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_monotonic_ulid() FROM generate_series(1, 1000000);
 ```
 
 Create a table with [ulid][] as a primary key:
@@ -220,22 +248,81 @@ SELECT * FROM users WHERE id = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 ```
 
 Cast [ulid][] to timestamp:
-
-```sql
-ALTER TABLE users
-ADD COLUMN created_at timestamp GENERATED ALWAYS AS (id::timestamp) STORED;
+```SQL
+SELECT id::timestamp FROM users WHERE id;
 ```
 
-Cast timestamp to [ulid][], this generates a zeroed ULID with the timestamp prefixed (TTTTTTTTTT0000000000000000):
-
-```sql
--- gets all users where the ID was created on 2023-09-15, without using another column and taking advantage of the index
-SELECT * FROM users WHERE id BETWEEN '2023-09-15'::timestamp::ulid AND '2023-09-16'::timestamp::ulid;
+or to uuid
+```SQL
+SELECT id::uuid FROM users WHERE id;
 ```
 
-## Installation
+## Recommendation
 
-Use [pgrx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
+### Do not confuse ULID's internal date with the record creation date
+
+They are indeed very similar at first sight, but the dates have different meanings and more importantly a different lifecycle.
+
+**I would strongly advise against** using ulid as a create_date column for the following reasons:
+
+* First an index of a date column will be faster than on a random-date-ordered guid.
+* Shit happens - loss of data, code mistakes, migrations - you may have to change one of these dates without impacting the other.
+* You may decide to create ULIDs asynchronously or in advence, therefore dissociating generation from record creation.
+* In the end they are two different things: the **id's** creation date vs the **record's** creation date.
+
+## Building
+
+ You may build and deploy the extension locally:  
+
+```shell
+$ cargo install cargo-pgrx --version 0.11.1 --locked
+# on osx only, because we need pg_config
+$ brew install postgresql
+```
+
+[pgrx][] is a friendly framework to deploy postgresql extensions in rust, to install a local dev environment, use
+
+```shell
+# if postgresql is not installed
+# the following command will install and configure each version
+$ cargo pgrx init
+```
+
+or use your own running instance:
+```shell
+# if you need to reuse a pre-installed postgresql
+# make sure postgresql/bin is in the PATH
+# ie. fish_add_path /opt/homebrew/opt/postgresql@16/bin
+$ cargo pgrx init --pg16 (which pg_config)
+```
+
+From there, your may run the unit tests, interact with a test instance or compile the delivery package.
+
+```shell
+# run the unit tests
+$ cargo pgrx test
+```
+
+```shell
+# interact with a test instance
+$ cargo pgrx start
+$ cargo pgrx connect
+```
+
+```shell
+# compile the delivery package
+$ cargo pgrx install --release
+$ cargo pgrx package
+```
+
+Last, buid a postgres distribution with builtin ulid support
+
+```shell
+# ensure docker is up
+make
+```
+
+Further details can be found by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
 
 You can also download relevant files from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
 
