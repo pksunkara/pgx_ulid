@@ -119,7 +119,7 @@ ulid=# EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate
 
 </details>
 
-## Monotonicity
+### Monotonicity
 
 Monotony ensures guarantees k-sorting order on the same postgres instance.
 
@@ -178,13 +178,13 @@ ulid=# EXPLAIN ANALYZE INSERT INTO users (name) SELECT 'Client 2' FROM generate_
 </details>
 
 <!-- omit from toc -->
-### Pros
+#### Pros
 
 1. Monotonic ULIDs are better for indexing, as they are sorted by default.
 2. Monotonic ULIDs slightly faster than `gen_ulid()` when generating lots of ULIDs within one millisecond. Because, in this case, there is no need to generate random component of ULID. Instead it is just incremented.
 
 <!-- omit from toc -->
-### Cons
+#### Cons
 
 1. Previously generated ULID is saved in shmem and accessed via LWLock. i.e. it is exclusive for function invocation within database. Theoretically this can lead to slowdowns.
 
