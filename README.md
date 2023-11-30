@@ -338,7 +338,10 @@ Last, buid a postgres distribution with builtin ulid support
 
 ```shell
 # ensure docker is up
+# to build the docker image
 make
+# to run it
+make run
 ```
 
 Further details can be found by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
