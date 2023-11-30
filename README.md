@@ -205,7 +205,7 @@ The extension consist of 3 files
 1. **ulid--0.1.4.sql** & **ulid.control** - the extension configuration file, to deploy in SHAREDIR
 2. **ulid.so** - the extension itself, to deploy in LIBDIR
 
-edit postgresql.conf, add the following line
+edit *postgresql.conf*, add the following line:
 
 ```conf
 shared_preload_libraries = 'ulid'	# (change requires restart)
@@ -252,6 +252,14 @@ CREATE TABLE users (
 );
 ```
 
+Insert records
+
+```SQL
+INSERT INTO users values (DEFAULT, 'Olivier');
+```
+
+
+
 Operate it normally with text in queries:
 
 ```sql
@@ -272,14 +280,14 @@ SELECT id::uuid FROM users WHERE id;
 
 ### Do not confuse ULID's internal date with the record creation date
 
-They are indeed very similar at first sight, but the dates have different meanings and more importantly a different lifecycle.
+They are indeed quite similar at first glance, yet the dates have different connotations and, more significantly, a distinct life cycle.
 
 **I would strongly advise against** using ulid as a create_date column for the following reasons:
 
-* First an index of a date column will be faster than on a random-date-ordered guid.
+* First an index is faster on a date column than on a random-date-ordered guid. thanks to its randomness.
 * Shit happens - loss of data, code mistakes, migrations - you may have to change one of these dates without impacting the other.
 * You may decide to create ULIDs asynchronously or in advence, therefore dissociating generation from record creation.
-* In the end they are two different things: the **id's** creation date vs the **record's** creation date. Typically, in IT we get much better results when we split concerns.
+* In the end they are two different things: the **id's creation date** vs the **record's creation date**. Typically, in IT we get much better results when by spliting concerns.
 
 ## Building
 
