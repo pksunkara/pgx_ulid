@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.1.4
-* With a timezone issue with unit tests
+* Fixed a timezone issue with unit tests
 * Upgrade prgx to 0.11.1
 * Reworked Dockerfile - multi-stage, better extension configuration, added a Makefile with 'all' and 'run' targets
 * Improve README
