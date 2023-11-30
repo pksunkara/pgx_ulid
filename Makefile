@@ -1,5 +1,5 @@
 all:
-	 docker build -t mypsql --build-arg="PG_MAJOR=16" .
+	 docker build -t postgresql-ulid --build-arg="PG_MAJOR=16" .
 	 
 run:
-	docker run -p 5432:5432 mypsql
+	docker run -p 5432:5432 postgresql-ulid
