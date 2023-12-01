@@ -1,4 +1,4 @@
-# use 12, 13, 14, 15, 15
+# use 12, 13, 14, 15, 16
 ARG PG_MAJOR
 
 FROM postgres:${PG_MAJOR} as build
