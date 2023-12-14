@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+#### Enhancements
+* Added support for Postgres 16
+
 ## 0.1.3
 
 #### Enhancements
