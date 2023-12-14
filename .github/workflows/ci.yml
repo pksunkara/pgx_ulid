@@ -9,7 +9,7 @@ concurrency:
 jobs:
   ci:
     name: CI
-    needs: [test, lint]
+    needs: [test, lint, lockfile]
     runs-on: ubuntu-latest
     steps:
       - name: Done
@@ -46,3 +46,13 @@ jobs:
         with:
           command: fmt
           args: -- --check
+
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@1.70.0
+      - name: Lockfile check
+        run: cargo update -w --locked
