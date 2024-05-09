@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.5
+* Update dependencies
+
 ## 0.1.4
 
 #### Enhancements

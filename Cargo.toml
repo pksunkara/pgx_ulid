@@ -1,16 +1,16 @@
 [package]
 name    = "ulid"
 publish = false
-version = "0.1.4"
+version = "0.1.5"
 
 edition      = "2021"
-rust-version = "1.70.0"
+rust-version = "1.78.0"
 
 [lib]
 crate-type = ["cdylib"]
 
 [features]
-default = ["pg15"]
+default = ["pg16"]
 pg11    = ["pgrx-tests/pg11", "pgrx/pg11"]
 pg12    = ["pgrx-tests/pg12", "pgrx/pg12"]
 pg13    = ["pgrx-tests/pg13", "pgrx/pg13"]
@@ -20,11 +20,11 @@ pg16    = ["pgrx-tests/pg16", "pgrx/pg16"]
 pg_test = []
 
 [dependencies]
-inner_ulid = { package = "ulid", version = "1.0.0" }
-pgrx       = "=0.11.2"
+inner_ulid = { package = "ulid", version = "1.1.2" }
+pgrx       = "=0.11.4"
 
 [dev-dependencies]
-pgrx-tests = "=0.11.2"
+pgrx-tests = "=0.11.4"
 
 [profile.dev]
 panic = "unwind"
