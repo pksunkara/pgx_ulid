@@ -111,6 +111,13 @@ fn ulid_to_uuid(input: ulid) -> Uuid {
 }
 
 #[pg_extern(immutable, parallel_safe)]
+fn ulid_to_bytea(input: ulid) -> Vec<u8> {
+    let mut bytes = input.0.to_ne_bytes();
+    bytes.reverse();
+    bytes.to_vec()
+}
+
+#[pg_extern(immutable, parallel_safe)]
 fn ulid_to_timestamp(input: ulid) -> Timestamp {
     let inner_seconds = (InnerUlid(input.0).timestamp_ms() as f64) / 1000.0;
     to_timestamp(inner_seconds).into()
@@ -135,6 +142,7 @@ extension_sql!(
     r#"
 CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
 CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
+CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
 CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
 "#,
@@ -149,6 +157,9 @@ mod tests {
     const INT: u128 = 2029121117734015635515926905565997019;
     const TEXT: &str = "01GV5PA9EQG7D82Q3Y4PKBZSYV";
     const UUID: &str = "0186cb65-25d7-81da-815c-7e25a6bfe7db";
+    const BYTEA: &[u8] = &[
+        1, 134, 203, 101, 37, 215, 129, 218, 129, 92, 126, 37, 166, 191, 231, 219,
+    ];
     const TIMESTAMP: &str = "2023-03-10 12:00:49.111";
 
     #[pg_test]
@@ -209,6 +220,13 @@ mod tests {
     fn test_ulid_to_uuid() {
         let result = Spi::get_one::<&str>(&format!("SELECT '{TEXT}'::ulid::uuid::text;")).unwrap();
         assert_eq!(Some(UUID), result);
+    }
+
+    #[pg_test]
+    fn test_ulid_to_bytea() {
+        let result = Spi::get_one::<&[u8]>(&format!("SELECT '{TEXT}'::ulid::bytea;")).unwrap();
+
+        assert_eq!(Some(BYTEA), result);
     }
 
     #[pg_test]
