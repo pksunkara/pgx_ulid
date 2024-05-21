@@ -42,7 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install rust
-        uses: dtolnay/rust-toolchain@1.70.0
+        uses: dtolnay/rust-toolchain@1.74.0
       - name: Install dependencies
         run: |
           # Add postgres package repo
