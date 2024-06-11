@@ -8,6 +8,7 @@ A postgres extension to support [ulid][].
 3. [Monotonicity](#monotonicity)
 4. [Usage](#usage)
 5. [Installation](#installation)
+6. [Troubleshooting](#troubleshooting)
 
 ## Why should I use this?
 
@@ -238,6 +239,23 @@ SELECT * FROM users WHERE id BETWEEN '2023-09-15'::timestamp::ulid AND '2023-09-
 Use [pgrx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
 
 You can also download relevant files from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
+
+## Troubleshooting
+
+If you encounter the exclusive lock error while using `pgx_ulid`, follow these steps to resolve the issue:
+
+1. Alter the system to set `shared_preload_libraries` to `ulid` by running the following SQL command:
+
+   ```sql
+   ALTER SYSTEM SET shared_preload_libraries = 'ulid';
+   ```
+
+2. Restart the PostgreSQL service to apply the changes. The command to restart PostgreSQL depends on your system.
+3. Verify that `ulid` is successfully loaded into shared libraries by executing:
+
+   ```sql
+   SHOW shared_preload_libraries;
+   ```
 
 <!-- omit from toc -->
 ## Contributors
