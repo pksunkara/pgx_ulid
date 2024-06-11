@@ -246,16 +246,16 @@ If you encounter the exclusive lock error while using `pgx_ulid`, follow these s
 
 1. Alter the system to set `shared_preload_libraries` to `ulid` by running the following SQL command:
 
-  ```sql
-  ALTER SYSTEM SET shared_preload_libraries = 'ulid';
-  ```
+   ```sql
+   ALTER SYSTEM SET shared_preload_libraries = 'ulid';
+   ```
 
 2. Restart the PostgreSQL service to apply the changes. The command to restart PostgreSQL depends on your system.
 3. Verify that `ulid` is successfully loaded into shared libraries by executing:
 
-  ```sql
-  SHOW shared_preload_libraries;
-  ```
+   ```sql
+   SHOW shared_preload_libraries;
+   ```
 
 <!-- omit from toc -->
 ## Contributors
