@@ -33,10 +33,16 @@ impl InOutFuncs for ulid {
         Self: Sized,
     {
         let val = input.to_str().unwrap();
-        let inner = InnerUlid::from_string(val)
-            .unwrap_or_else(|err| panic!("invalid input syntax for type ulid: \"{val}\": {err}"));
-
-        ulid(inner.0)
+        match InnerUlid::from_string(val) {
+            Ok(inner) => ulid(inner.0),
+            Err(err) => {
+                ereport!(
+                    ERROR,
+                    PgSqlErrorCode::ERRCODE_INVALID_TEXT_REPRESENTATION,
+                    format!("invalid input syntax for type ulid: \"{val}\": {err}")
+                );
+            }
+        }
     }
 
     #[inline]
