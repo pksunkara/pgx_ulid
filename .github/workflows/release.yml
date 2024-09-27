@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        postgres: [14, 15, 16]
+        postgres: [14, 15, 16, 17]
         box:
           - runner: ubuntu-22.04
             arch: amd64
@@ -42,7 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install rust
-        uses: dtolnay/rust-toolchain@1.74.0
+        uses: dtolnay/rust-toolchain@1.81.0
       - name: Install dependencies
         run: |
           # Add postgres package repo
@@ -60,7 +60,7 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          cargo install cargo-pgrx --version 0.11.2 --locked
+          cargo install cargo-pgrx --version 0.12.5 --locked
           cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
       - name: Build artifacts
         run: |
