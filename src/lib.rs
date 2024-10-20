@@ -1,12 +1,12 @@
 use core::ffi::CStr;
 use inner_ulid::Ulid as InnerUlid;
+use pgrx::callconv::{ArgAbi, BoxRet};
+use pgrx::datum::Datum;
+use pgrx::pgrx_sql_entity_graph::metadata::{
+    ArgumentError, Returns, ReturnsError, SqlMapping, SqlTranslatable,
+};
 use pgrx::{
-    pg_shmem_init,
-    pg_sys::{Datum, Oid},
-    prelude::*,
-    rust_regtypein,
-    shmem::*,
-    PgLwLock, StringInfo, Uuid,
+    pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, shmem::*, PgLwLock, StringInfo, Uuid,
 };
 use std::time::{Duration, SystemTime};
 
@@ -20,10 +20,7 @@ pub extern "C" fn _PG_init() {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(
-    PostgresType, PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord,
-)]
-#[inoutfuncs]
+#[derive(PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord)]
 pub struct ulid(u128);
 
 impl InOutFuncs for ulid {
@@ -53,7 +50,7 @@ impl InOutFuncs for ulid {
 
 impl IntoDatum for ulid {
     #[inline]
-    fn into_datum(self) -> Option<Datum> {
+    fn into_datum(self) -> Option<pg_sys::Datum> {
         self.0.to_ne_bytes().into_datum()
     }
 
@@ -65,7 +62,11 @@ impl IntoDatum for ulid {
 
 impl FromDatum for ulid {
     #[inline]
-    unsafe fn from_polymorphic_datum(datum: Datum, is_null: bool, typoid: Oid) -> Option<Self>
+    unsafe fn from_polymorphic_datum(
+        datum: pg_sys::Datum,
+        is_null: bool,
+        typoid: Oid,
+    ) -> Option<Self>
     where
         Self: Sized,
     {
@@ -75,6 +76,33 @@ impl FromDatum for ulid {
         len_bytes.copy_from_slice(bytes);
 
         Some(ulid(u128::from_ne_bytes(len_bytes)))
+    }
+}
+
+unsafe impl SqlTranslatable for ulid {
+    fn argument_sql() -> Result<SqlMapping, ArgumentError> {
+        // this is what the SQL type is called when used in a function argument position
+        Ok(SqlMapping::As("ulid".into()))
+    }
+
+    fn return_sql() -> Result<Returns, ReturnsError> {
+        // this is what the SQL type is called when used in a function return type position
+        Ok(Returns::One(SqlMapping::As("ulid".into())))
+    }
+}
+
+unsafe impl<'fcx> ArgAbi<'fcx> for ulid
+where
+    Self: 'fcx,
+{
+    unsafe fn unbox_arg_unchecked(arg: ::pgrx::callconv::Arg<'_, 'fcx>) -> Self {
+        unsafe { arg.unbox_arg_using_from_datum().unwrap() }
+    }
+}
+
+unsafe impl BoxRet for ulid {
+    unsafe fn box_into<'fcx>(self, fcinfo: &mut pgrx::callconv::FcInfo<'fcx>) -> Datum<'fcx> {
+        unsafe { fcinfo.return_raw_datum(self.into_datum().unwrap()) }
     }
 }
 
