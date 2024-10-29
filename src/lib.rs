@@ -21,7 +21,9 @@ pub extern "C" fn _PG_init() {
 
 #[allow(non_camel_case_types)]
 #[derive(PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord)]
-pub struct ulid(u128);
+pub struct ulid {
+    numeric: u128,
+}
 
 impl InOutFuncs for ulid {
     #[inline]
@@ -51,7 +53,7 @@ impl InOutFuncs for ulid {
 impl IntoDatum for ulid {
     #[inline]
     fn into_datum(self) -> Option<pg_sys::Datum> {
-        self.0.to_ne_bytes().into_datum()
+        self.numeric.to_ne_bytes().into_datum()
     }
 
     #[inline]
@@ -75,7 +77,9 @@ impl FromDatum for ulid {
         let mut len_bytes = [0u8; 16];
         len_bytes.copy_from_slice(bytes);
 
-        Some(ulid(u128::from_ne_bytes(len_bytes)))
+        Some(ulid {
+            numeric: u128::from_ne_bytes(len_bytes),
+        })
     }
 }
 
@@ -122,38 +126,44 @@ fn gen_monotonic_ulid() -> ulid {
         shared_ulid.increment().unwrap()
     };
     *shared_bytes = u128::from(new_ulid);
-    ulid(*shared_bytes)
+    ulid {
+        numeric: *shared_bytes,
+    }
 }
 
 #[pg_extern]
 fn gen_ulid() -> ulid {
-    ulid(InnerUlid::new().0)
+    ulid {
+        numeric: InnerUlid::new().0,
+    }
 }
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_from_uuid(input: Uuid) -> ulid {
     let mut bytes = *input.as_bytes();
     bytes.reverse();
-    ulid(u128::from_ne_bytes(bytes))
+    ulid {
+        numeric: u128::from_ne_bytes(bytes),
+    }
 }
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_to_uuid(input: ulid) -> Uuid {
-    let mut bytes = input.0.to_ne_bytes();
+    let mut bytes = input.numeric.to_ne_bytes();
     bytes.reverse();
     Uuid::from_bytes(bytes)
 }
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_to_bytea(input: ulid) -> Vec<u8> {
-    let mut bytes = input.0.to_ne_bytes();
+    let mut bytes = input.numeric.to_ne_bytes();
     bytes.reverse();
     bytes.to_vec()
 }
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_to_timestamp(input: ulid) -> Timestamp {
-    let inner_seconds = (InnerUlid(input.0).timestamp_ms() as f64) / 1000.0;
+    let inner_seconds = (InnerUlid(input.numeric).timestamp_ms() as f64) / 1000.0;
     to_timestamp(inner_seconds).into()
 }
 
@@ -169,7 +179,7 @@ fn timestamp_to_ulid(input: Timestamp) -> ulid {
 
     let inner = InnerUlid::from_parts(milliseconds, 0);
 
-    ulid(inner.0)
+    ulid { numeric: inner.0 }
 }
 
 extension_sql!(
@@ -205,7 +215,7 @@ mod tests {
     #[pg_test]
     fn test_string_to_ulid() {
         let result = Spi::get_one::<ulid>(&format!("SELECT '{TEXT}'::ulid;")).unwrap();
-        assert_eq!(Some(ulid(INT)), result);
+        assert_eq!(Some(ulid { numeric: INT }), result);
     }
 
     #[pg_test]
@@ -217,7 +227,7 @@ mod tests {
     #[pg_test]
     fn test_string_to_ulid_lowercase() {
         let result = Spi::get_one::<ulid>(&format!("SELECT LOWER('{TEXT}')::ulid;")).unwrap();
-        assert_eq!(Some(ulid(INT)), result);
+        assert_eq!(Some(ulid { numeric: INT }), result);
     }
 
     #[pg_test]
@@ -266,7 +276,7 @@ mod tests {
     #[pg_test]
     fn test_uuid_to_ulid() {
         let result = Spi::get_one::<ulid>(&format!("SELECT '{UUID}'::uuid::ulid;")).unwrap();
-        assert_eq!(Some(ulid(INT)), result);
+        assert_eq!(Some(ulid { numeric: INT }), result);
     }
 
     #[pg_test]
