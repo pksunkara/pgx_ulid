@@ -214,7 +214,14 @@ CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
 CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
 "#,
-    name = "ulid_casts"
+    name = "ulid_casts",
+    requires = [
+        ulid_from_uuid,
+        ulid_to_uuid,
+        ulid_to_bytea,
+        ulid_to_timestamp,
+        timestamp_to_ulid
+    ]
 );
 
 #[cfg(any(test, feature = "pg_test"))]
