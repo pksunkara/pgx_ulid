@@ -10,7 +10,7 @@ use pgrx::{
 };
 use std::time::{Duration, SystemTime};
 
-pgrx::pg_module_magic!();
+::pgrx::pg_module_magic!();
 
 static SHARED_ULID: PgLwLock<u128> = PgLwLock::new();
 
@@ -326,6 +326,7 @@ pub mod pg_test {
         // perform one-off initialization when the pg_test framework starts
     }
 
+    #[must_use]
     pub fn postgresql_conf_options() -> Vec<&'static str> {
         // return any postgresql.conf settings that are required for your tests
         vec![]
