@@ -1,5 +1,5 @@
 [package]
-name    = "ulid"
+name    = "pgx_ulid"
 publish = false
 version = "0.1.5"
 
@@ -10,6 +10,7 @@ rust-version = "1.81.0"
 crate-type = ["cdylib", "lib"]
 
 [[bin]]
+name = "pgrx_embed_pgx_ulid"
 path = "./src/bin/pgrx_embed.rs"
 
 [features]
