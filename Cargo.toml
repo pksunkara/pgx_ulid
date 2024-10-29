@@ -21,11 +21,11 @@ pg17    = ["pgrx-tests/pg17", "pgrx/pg17"]
 pg_test = []
 
 [dependencies]
-inner_ulid = { package = "ulid", version = "1.0.0" }
-pgrx       = "^0.12.5"
+inner_ulid = { package = "ulid", version = "1.1.3" }
+pgrx       = "0.12.7"
 
 [dev-dependencies]
-pgrx-tests = "^0.12.5"
+pgrx-tests = "0.12.7"
 
 [profile.dev]
 panic = "unwind"
