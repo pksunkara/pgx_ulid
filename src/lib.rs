@@ -8,6 +8,7 @@ use pgrx::pgrx_sql_entity_graph::metadata::{
 use pgrx::{
     pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, shmem::*, PgLwLock, StringInfo, Uuid,
 };
+use std::error::Error;
 use std::time::{Duration, SystemTime};
 
 ::pgrx::pg_module_magic!();
@@ -25,29 +26,27 @@ pub struct ulid {
     numeric: u128,
 }
 
-impl InOutFuncs for ulid {
-    #[inline]
-    fn input(input: &CStr) -> Self
-    where
-        Self: Sized,
-    {
-        let val = input.to_str().unwrap();
-        match InnerUlid::from_string(val) {
-            Ok(inner) => ulid(inner.0),
-            Err(err) => {
-                ereport!(
-                    ERROR,
-                    PgSqlErrorCode::ERRCODE_INVALID_TEXT_REPRESENTATION,
-                    format!("invalid input syntax for type ulid: \"{val}\": {err}")
-                );
-            }
+#[pg_extern(immutable, parallel_safe, requires = [ "shell_type" ])]
+fn ulid_in(input: &CStr) -> Result<ulid, Box<dyn Error>> {
+    let val = input.to_str().unwrap();
+    match InnerUlid::from_string(val) {
+        Ok(inner) => Ok(ulid { numeric: inner.0 }),
+        Err(err) => {
+            ereport!(
+                ERROR,
+                PgSqlErrorCode::ERRCODE_INVALID_TEXT_REPRESENTATION,
+                format!("invalid input syntax for type ulid: \"{val}\": {err}")
+            );
         }
     }
+}
 
-    #[inline]
-    fn output(&self, buffer: &mut StringInfo) {
-        buffer.push_str(&InnerUlid(self.0).to_string())
-    }
+#[pg_extern(immutable, parallel_safe, requires = [ "shell_type" ])]
+fn ulid_out(value: ulid) -> &'static CStr {
+    let mut s = StringInfo::new();
+    s.push_str(&InnerUlid(value.numeric).to_string());
+    // SAFETY: We just constructed this StringInfo ourselves
+    unsafe { s.leak_cstr() }
 }
 
 impl IntoDatum for ulid {
@@ -181,6 +180,31 @@ fn timestamp_to_ulid(input: Timestamp) -> ulid {
 
     ulid { numeric: inner.0 }
 }
+
+// Creates the `ulid` shell type, which is essentially a type placeholder so that the
+// input and output functions can be created
+extension_sql!(
+    r#"
+CREATE TYPE ulid; -- Shell type
+"#,
+    name = "shell_type",
+    creates = [Type(ulid)],
+    bootstrap // Declare this extension_sql block as the "bootstrap" block so that it happens first in SQL generation
+);
+
+// Create the actual type, specifying the input and output functions
+extension_sql!(
+    r#"
+CREATE TYPE ulid (
+  INPUT = ulid_in,
+  OUTPUT = ulid_out,
+  LIKE = uuid
+);
+"#,
+    name = "concrete_type",
+    creates = [Type(ulid)],
+    requires = ["shell_type", ulid_in, ulid_out], // So that we won't be created until the shell type and input and output functions have
+);
 
 extension_sql!(
     r#"
