@@ -5,7 +5,6 @@ use pgrx::datum::Datum;
 use pgrx::{
     pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, shmem::*, PgLwLock, StringInfo, Uuid,
 };
-use std::error::Error;
 use std::time::{Duration, SystemTime};
 
 ::pgrx::pg_module_magic!();
@@ -250,23 +249,21 @@ mod tests {
     }
 
     #[pg_test]
-    fn test_timestamp_to_ulid() -> Result<(), Box<dyn Error>> {
+    fn test_timestamp_to_ulid() {
         let result = Spi::get_one::<&str>(&format!(
             "SET TIMEZONE TO 'UTC'; SELECT '{TIMESTAMP}'::timestamp::ulid::text;"
-        ))?;
+        ))
+        .unwrap();
         assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
-
-        Ok(())
     }
 
     #[pg_test]
-    fn test_timestamptz_to_ulid() -> Result<(), Box<dyn Error>> {
+    fn test_timestamptz_to_ulid() {
         let result = Spi::get_one::<&str>(&format!(
             "SET TIMEZONE TO 'UTC'; SELECT '{TIMESTAMP}'::timestamptz::ulid::text;"
-        ))?;
+        ))
+        .unwrap();
         assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
-
-        Ok(())
     }
 
     #[pg_test]
