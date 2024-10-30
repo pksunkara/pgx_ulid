@@ -156,7 +156,20 @@ fn timestamp_to_ulid(input: Timestamp) -> ulid {
     ulid(inner.0)
 }
 
+#[pg_extern(immutable, parallel_safe)]
+fn timestamptz_to_ulid(input: TimestampWithTimeZone) -> ulid {
+    let epoch: f64 = input
+        .extract_part(DateTimeParts::Epoch)
+        .unwrap()
+        .try_into()
+        .unwrap();
 
+    let milliseconds = (epoch * 1000.0) as u64;
+
+    let inner = InnerUlid::from_parts(milliseconds, 0);
+
+    ulid(inner.0)
+}
 
 extension_sql!(
     r#"
@@ -165,6 +178,7 @@ CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
 CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
+CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz) AS IMPLICIT;
 "#,
     name = "ulid_casts",
     requires = [
@@ -172,7 +186,8 @@ CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IM
         ulid_to_uuid,
         ulid_to_bytea,
         ulid_to_timestamp,
-        timestamp_to_ulid
+        timestamp_to_ulid,
+        timestamptz_to_ulid
     ]
 );
 
@@ -244,7 +259,14 @@ mod tests {
         Ok(())
     }
 
+    #[pg_test]
+    fn test_timestamptz_to_ulid() -> Result<(), Box<dyn Error>> {
+        let result = Spi::get_one::<&str>(&format!(
+            "SET TIMEZONE TO 'UTC'; SELECT '{TIMESTAMP}'::timestamptz::ulid::text;"
+        ))?;
         assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
+
+        Ok(())
     }
 
     #[pg_test]
