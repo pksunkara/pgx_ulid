@@ -1,5 +1,6 @@
 use core::ffi::CStr;
 use inner_ulid::Ulid as InnerUlid;
+use pg_sys::Datum as SysDatum;
 use pgrx::callconv::{ArgAbi, BoxRet};
 use pgrx::datum::Datum;
 use pgrx::{
@@ -45,7 +46,7 @@ impl InOutFuncs for ulid {
 
 impl IntoDatum for ulid {
     #[inline]
-    fn into_datum(self) -> Option<pg_sys::Datum> {
+    fn into_datum(self) -> Option<SysDatum> {
         self.0.to_ne_bytes().into_datum()
     }
 
@@ -57,11 +58,7 @@ impl IntoDatum for ulid {
 
 impl FromDatum for ulid {
     #[inline]
-    unsafe fn from_polymorphic_datum(
-        datum: pg_sys::Datum,
-        is_null: bool,
-        typoid: Oid,
-    ) -> Option<Self>
+    unsafe fn from_polymorphic_datum(datum: SysDatum, is_null: bool, typoid: Oid) -> Option<Self>
     where
         Self: Sized,
     {
