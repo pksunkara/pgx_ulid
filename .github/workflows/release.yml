@@ -69,29 +69,51 @@ jobs:
           cargo pgrx package --no-default-features --features pg${{ matrix.postgres }}
       - name: Package artifacts
         run: |
-          package_path="target/release/${{ env.NAME }}-pg${{ matrix.postgres }}"
-
-          # Create install control file
+          # Extract extension version
           extension_version=${{ github.ref_name }}
-          # strip the leading v
           clean_version=${extension_version:1}
 
-          extension_path="${package_path}/usr/share/postgresql/${{ matrix.postgres }}/extension"
-          cp ${extension_path}/${{ env.NAME }}.control ${extension_path}/${{ env.EXT_NAME }}.control
-          cp ${extension_path}/${{ env.NAME }}--${clean_version}.sql ${extension_path}/${{ env.EXT_NAME }}--${clean_version}.sql
+          # Extract the created files
+          mkdir archive
+          cp `find target/release -type f -name "${{ env.NAME }}*"` archive
 
-          mkdir -p ${package_path}/DEBIAN
-          touch ${package_path}/DEBIAN/control
-          echo 'Package: ${{ env.PKG_NAME }}' >> ${package_path}/DEBIAN/control
-          echo 'Version:' ${clean_version} >> ${package_path}/DEBIAN/control
-          echo 'Architecture: ${{ matrix.box.arch }}' >> ${package_path}/DEBIAN/control
-          echo 'Maintainer: Pavan Sunkara' >> ${package_path}/DEBIAN/control
-          echo 'Description: A PostgreSQL extension for ULID' >> ${package_path}/DEBIAN/control
+          # Rename files
+          mv archive/${{ env.NAME }}.control archive/${{ env.EXT_NAME }}.control
+          mv archive/${{ env.NAME }}--${clean_version}.sql archive/${{ env.EXT_NAME }}--${clean_version}.sql
+
+          # Copy files into directory structure
+          mkdir -p package/usr/lib/postgresql/lib
+          mkdir -p package/var/lib/postgresql/extension
+
+          cp archive/*.so package/usr/lib/postgresql/lib
+          cp archive/*.control package/var/lib/postgresql/extension
+          cp archive/*.sql package/var/lib/postgresql/extension
+
+          # symlinks to copy files into directory structure
+          mkdir -p package/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          cd package/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          cp -s ../../lib/*.so .
+          cd ../../../../../..
+
+          mkdir -p package/usr/share/postgresql/${{ matrix.postgres }}/extension
+          cd package/usr/share/postgresql/${{ matrix.postgres }}/extension
+          cp -s ../../../../../var/lib/postgresql/extension/*.control .
+          cp -s ../../../../../var/lib/postgresql/extension/*.sql .
+          cd ../../../../../..
+
+          # Create control file
+          mkdir -p package/DEBIAN
+          touch package/DEBIAN/control
+          echo 'Package: ${{ env.PKG_NAME }}' >> package/DEBIAN/control
+          echo 'Version:' ${clean_version} >> package/DEBIAN/control
+          echo 'Architecture: ${{ matrix.box.arch }}' >> package/DEBIAN/control
+          echo 'Maintainer: Pavan Sunkara' >> package/DEBIAN/control
+          echo 'Description: A PostgreSQL extension for ULID' >> package/DEBIAN/control
 
           # Create deb package
-          sudo chown -R root:root ${package_path}
-          sudo chmod -R 00755 ${package_path}
-          sudo dpkg-deb -Zxz --build --root-owner-group ${package_path}
+          sudo chown -R root:root package
+          sudo chmod -R 00755 package
+          sudo dpkg-deb -Zxz --build --root-owner-group package
       - name: Upload artifacts
         uses: actions/upload-release-asset@v1
         env:
