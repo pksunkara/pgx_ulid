@@ -1,16 +1,14 @@
 use core::ffi::CStr;
 use inner_ulid::Ulid as InnerUlid;
+use pg_sys::Datum as SysDatum;
+use pgrx::callconv::{ArgAbi, BoxRet};
+use pgrx::datum::Datum;
 use pgrx::{
-    pg_shmem_init,
-    pg_sys::{Datum, Oid},
-    prelude::*,
-    rust_regtypein,
-    shmem::*,
-    PgLwLock, StringInfo, Uuid,
+    pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, shmem::*, PgLwLock, StringInfo, Uuid,
 };
 use std::time::{Duration, SystemTime};
 
-pgrx::pg_module_magic!();
+::pgrx::pg_module_magic!();
 
 static SHARED_ULID: PgLwLock<u128> = PgLwLock::new();
 
@@ -24,6 +22,7 @@ pub extern "C" fn _PG_init() {
     PostgresType, PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord,
 )]
 #[inoutfuncs]
+#[bikeshed_postgres_type_manually_impl_from_into_datum]
 pub struct ulid(u128);
 
 impl InOutFuncs for ulid {
@@ -33,16 +32,10 @@ impl InOutFuncs for ulid {
         Self: Sized,
     {
         let val = input.to_str().unwrap();
-        match InnerUlid::from_string(val) {
-            Ok(inner) => ulid(inner.0),
-            Err(err) => {
-                ereport!(
-                    ERROR,
-                    PgSqlErrorCode::ERRCODE_INVALID_TEXT_REPRESENTATION,
-                    format!("invalid input syntax for type ulid: \"{val}\": {err}")
-                );
-            }
-        }
+        let inner = InnerUlid::from_string(val)
+            .unwrap_or_else(|err| panic!("invalid input syntax for type ulid: \"{val}\": {err}"));
+
+        ulid(inner.0)
     }
 
     #[inline]
@@ -53,7 +46,7 @@ impl InOutFuncs for ulid {
 
 impl IntoDatum for ulid {
     #[inline]
-    fn into_datum(self) -> Option<Datum> {
+    fn into_datum(self) -> Option<SysDatum> {
         self.0.to_ne_bytes().into_datum()
     }
 
@@ -65,7 +58,7 @@ impl IntoDatum for ulid {
 
 impl FromDatum for ulid {
     #[inline]
-    unsafe fn from_polymorphic_datum(datum: Datum, is_null: bool, typoid: Oid) -> Option<Self>
+    unsafe fn from_polymorphic_datum(datum: SysDatum, is_null: bool, typoid: Oid) -> Option<Self>
     where
         Self: Sized,
     {
@@ -75,6 +68,21 @@ impl FromDatum for ulid {
         len_bytes.copy_from_slice(bytes);
 
         Some(ulid(u128::from_ne_bytes(len_bytes)))
+    }
+}
+
+unsafe impl<'fcx> ArgAbi<'fcx> for ulid
+where
+    Self: 'fcx,
+{
+    unsafe fn unbox_arg_unchecked(arg: ::pgrx::callconv::Arg<'_, 'fcx>) -> Self {
+        unsafe { arg.unbox_arg_using_from_datum().unwrap() }
+    }
+}
+
+unsafe impl BoxRet for ulid {
+    unsafe fn box_into<'fcx>(self, fcinfo: &mut pgrx::callconv::FcInfo<'fcx>) -> Datum<'fcx> {
+        unsafe { fcinfo.return_raw_datum(self.into_datum().unwrap()) }
     }
 }
 
@@ -144,6 +152,21 @@ fn timestamp_to_ulid(input: Timestamp) -> ulid {
     ulid(inner.0)
 }
 
+#[pg_extern(immutable, parallel_safe)]
+fn timestamptz_to_ulid(input: TimestampWithTimeZone) -> ulid {
+    let epoch: f64 = input
+        .extract_part(DateTimeParts::Epoch)
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    let milliseconds = (epoch * 1000.0) as u64;
+
+    let inner = InnerUlid::from_parts(milliseconds, 0);
+
+    ulid(inner.0)
+}
+
 extension_sql!(
     r#"
 CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
@@ -151,8 +174,17 @@ CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
 CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
+CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz) AS IMPLICIT;
 "#,
-    name = "ulid_casts"
+    name = "ulid_casts",
+    requires = [
+        ulid_from_uuid,
+        ulid_to_uuid,
+        ulid_to_bytea,
+        ulid_to_timestamp,
+        timestamp_to_ulid,
+        timestamptz_to_ulid
+    ]
 );
 
 #[cfg(any(test, feature = "pg_test"))]
@@ -217,6 +249,15 @@ mod tests {
     fn test_timestamp_to_ulid() {
         let result = Spi::get_one::<&str>(&format!(
             "SET TIMEZONE TO 'UTC'; SELECT '{TIMESTAMP}'::timestamp::ulid::text;"
+        ))
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
+    }
+
+    #[pg_test]
+    fn test_timestamptz_to_ulid() {
+        let result = Spi::get_one::<&str>(&format!(
+            "SET TIMEZONE TO 'UTC'; SELECT '{TIMESTAMP}'::timestamptz::ulid::text;"
         ))
         .unwrap();
         assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
@@ -298,6 +339,7 @@ pub mod pg_test {
         // perform one-off initialization when the pg_test framework starts
     }
 
+    #[must_use]
     pub fn postgresql_conf_options() -> Vec<&'static str> {
         // return any postgresql.conf settings that are required for your tests
         vec![]

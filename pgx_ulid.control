@@ -1,5 +1,5 @@
 comment = 'ulid type and methods'
 default_version = '@CARGO_VERSION@'
-module_pathname = '$libdir/ulid'
+module_pathname = '$libdir/pgx_ulid'
 relocatable = false
 superuser = true
