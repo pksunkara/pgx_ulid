@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+#### BREAKING
+* Removed support for Postgres 11, 12 & 13
+
+#### Enhancements
+* Added support for Postgres 17
+* Better error code for error messages
+
 ## 0.1.5
 
 #### Enhancements
