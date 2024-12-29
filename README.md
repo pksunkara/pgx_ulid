@@ -113,12 +113,12 @@ ulid=# EXPLAIN ANALYSE INSERT INTO ulid_keys(id) SELECT gen_ulid() FROM generate
 
 ## Monotonicity
 
-This extension supports [monotonicity][] through `gen_monotonic_ulid()` function. To achive this, it uses PostgreSQL's shared memory and LWLock to store last generated ULID.
+This extension supports [monotonicity][] through `gen_monotonic_ulid()` function. To achieve this, it uses PostgreSQL's shared memory and LWLock to store last generated ULID.
 
 To be able to use [monotonic][monotonicity] ULID's, it is necessary to add this extension to `postgresql.conf`'s `shared_preload_libraries` configuration setting.
 
 ```conf
-shared_preload_libraries = 'ulid'	# (change requires restart)
+shared_preload_libraries = 'pgx_ulid'	# (change requires restart)
 ```
 
 <details>
@@ -193,7 +193,7 @@ ulid=# EXPLAIN ANALYZE INSERT INTO users (name) SELECT 'Client 2' FROM generate_
 Use the extension in the database:
 
 ```sql
-CREATE EXTENSION ulid;
+CREATE EXTENSION pgx_ulid;
 ```
 
 Create a table with [ulid][] as a primary key:
