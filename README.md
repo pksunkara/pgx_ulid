@@ -118,7 +118,7 @@ This extension supports [monotonicity][] through `gen_monotonic_ulid()` function
 To be able to use [monotonic][monotonicity] ULID's, it is necessary to add this extension to `postgresql.conf`'s `shared_preload_libraries` configuration setting.
 
 ```conf
-shared_preload_libraries = 'ulid'	# (change requires restart)
+shared_preload_libraries = 'pgx_ulid'	# (change requires restart)
 ```
 
 <details>
