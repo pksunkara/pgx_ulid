@@ -193,7 +193,7 @@ ulid=# EXPLAIN ANALYZE INSERT INTO users (name) SELECT 'Client 2' FROM generate_
 Use the extension in the database:
 
 ```sql
-CREATE EXTENSION ulid;
+CREATE EXTENSION pgx_ulid;
 ```
 
 Create a table with [ulid][] as a primary key:
