@@ -194,6 +194,7 @@ Use the extension in the database:
 
 ```sql
 CREATE EXTENSION ulid;
+-- or try "CREATE EXTENSION pgx_ulid;" if installed manually
 ```
 
 Create a table with [ulid][] as a primary key:
@@ -238,7 +239,7 @@ SELECT * FROM users WHERE id BETWEEN '2023-09-15'::timestamp::ulid AND '2023-09-
 
 Use [pgrx][]. You can clone this repo and install this extension locally by following [this guide](https://github.com/tcdi/pgrx/blob/master/cargo-pgrx/README.md#installing-your-extension-locally).
 
-You can also download relevant files from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
+You can also download relevant installation packages from [releases](https://github.com/pksunkara/pgx_ulid/releases) page.
 
 ## Troubleshooting
 
