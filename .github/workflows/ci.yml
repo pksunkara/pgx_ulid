@@ -30,6 +30,25 @@ jobs:
         run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} -t test .
       - name: Test
         run: docker run test cargo pgrx test pg${{ matrix.postgres }}
+
+  test_next:
+    name: Test builds on the next version of Postgres
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [18beta1]
+        runner:
+          - ubuntu-22.04
+          - ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build
+        run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} -t test .
+      - name: Test
+        run: docker run test cargo pgrx test pg${{ matrix.postgres }}
+
   lint:
     name: Linting (fmt + clippy)
     runs-on: ubuntu-latest
