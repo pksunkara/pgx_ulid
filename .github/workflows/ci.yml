@@ -45,7 +45,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Build
-        run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} -t test .
+        run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} --build-arg NEXT=true -t test .
       - name: Test
         run: docker run test cargo pgrx test pg${{ matrix.postgres }}
 
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install rust
-        uses: dtolnay/rust-toolchain@1.82.0
+        uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: rustfmt, clippy
       - name: Checkout
@@ -71,6 +71,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install rust
-        uses: dtolnay/rust-toolchain@1.82.0
+        uses: dtolnay/rust-toolchain@1.85.0
       - name: Lockfile check
         run: cargo update -w --locked
