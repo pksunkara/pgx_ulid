@@ -4,16 +4,17 @@ use pg_sys::Datum as SysDatum;
 use pgrx::callconv::{ArgAbi, BoxRet};
 use pgrx::datum::Datum;
 use pgrx::{
-    pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, shmem::*, PgLwLock, StringInfo, Uuid,
+    pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, PgSharedMemoryInitialization,
+    StringInfo, Uuid,
 };
 use std::time::{Duration, SystemTime};
 
 ::pgrx::pg_module_magic!();
 
-static SHARED_ULID: PgLwLock<u128> = PgLwLock::new();
+static SHARED_ULID: PgLwLock<u128> = PgLwLock::new(c"pgx_ulid_shared");
 
 #[pg_guard]
-pub extern "C" fn _PG_init() {
+pub extern "C-unwind" fn _PG_init() {
     pg_shmem_init!(SHARED_ULID);
 }
 
@@ -69,7 +70,7 @@ impl FromDatum for ulid {
     where
         Self: Sized,
     {
-        let bytes: &[u8] = FromDatum::from_polymorphic_datum(datum, is_null, typoid)?;
+        let bytes: &[u8] = unsafe { FromDatum::from_polymorphic_datum(datum, is_null, typoid)? };
 
         let mut len_bytes = [0u8; 16];
         len_bytes.copy_from_slice(bytes);
