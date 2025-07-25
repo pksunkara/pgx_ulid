@@ -25,7 +25,7 @@ RUN chown postgres:postgres /home/postgres
 USER postgres
 
 RUN \
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.81.0 && \
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.85.0 && \
   rustup --version && \
   rustc --version && \
   cargo --version
