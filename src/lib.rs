@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime};
 
 ::pgrx::pg_module_magic!();
 
-static SHARED_ULID: PgLwLock<u128> = PgLwLock::new();
+static SHARED_ULID: PgLwLock<u128> = unsafe { PgLwLock::new(c"pgx_ulid_shared") };
 
 #[pg_guard]
 pub extern "C" fn _PG_init() {
