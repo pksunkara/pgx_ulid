@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        postgres: [14, 15, 16, 17]
+        postgres: [14, 15, 16, 17, "18beta1"]
         runner:
           - ubuntu-22.04
           - ubuntu-22.04-arm
@@ -29,7 +29,9 @@ jobs:
       - name: Build
         run: docker buildx build --build-arg PG_MAJOR=${{ matrix.postgres }} -t test .
       - name: Test
-        run: docker run test cargo pgrx test pg${{ matrix.postgres }}
+        run: |
+          PG_VERSION=$(echo "${{ matrix.postgres }}" | sed 's/[^0-9].*$//')
+          docker run test cargo pgrx test pg${PG_VERSION}
   lint:
     name: Linting (fmt + clippy)
     runs-on: ubuntu-latest
