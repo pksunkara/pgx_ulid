@@ -60,7 +60,7 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-          cargo install cargo-pgrx --version 0.12.7 --locked
+          cargo install cargo-pgrx --version 0.16.0 --locked
           cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
       - name: Build artifacts
         run: |
