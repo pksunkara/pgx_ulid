@@ -24,10 +24,10 @@ pg_test = []
 
 [dependencies]
 inner_ulid = { package = "ulid", version = "1.1.3" }
-pgrx       = "^0.16.0"
+pgrx       = "^0.16.1"
 
 [dev-dependencies]
-pgrx-tests = "^0.16.0"
+pgrx-tests = "^0.16.1"
 
 [profile.dev]
 panic = "unwind"
