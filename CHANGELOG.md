@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+#### Enhancements
+* Added support for Postgres 18
+
 ## 0.2.0
 
 #### BREAKING
