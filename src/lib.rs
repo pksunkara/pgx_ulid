@@ -1,4 +1,6 @@
 use core::ffi::CStr;
+use std::time::{Duration, SystemTime};
+
 use inner_ulid::Ulid as InnerUlid;
 use pg_sys::Datum as SysDatum;
 use pgrx::callconv::{ArgAbi, BoxRet};
@@ -7,7 +9,6 @@ use pgrx::{
     pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, PgSharedMemoryInitialization,
     StringInfo, Uuid,
 };
-use std::time::{Duration, SystemTime};
 
 ::pgrx::pg_module_magic!();
 
@@ -141,8 +142,7 @@ fn ulid_to_bytea(input: ulid) -> Vec<u8> {
 
 #[pg_extern(immutable, parallel_safe)]
 fn ulid_to_timestamp(input: ulid) -> Timestamp {
-    let inner_seconds = (InnerUlid(input.0).timestamp_ms() as f64) / 1000.0;
-    to_timestamp(inner_seconds).into()
+    ulid_to_timestamptz(input).into()
 }
 
 #[pg_extern(immutable, parallel_safe)]
@@ -158,6 +158,12 @@ fn timestamp_to_ulid(input: Timestamp) -> ulid {
     let inner = InnerUlid::from_parts(milliseconds, 0);
 
     ulid(inner.0)
+}
+
+#[pg_extern(immutable, parallel_safe)]
+fn ulid_to_timestamptz(input: ulid) -> TimestampWithTimeZone {
+    let inner_seconds = (InnerUlid(input.0).timestamp_ms() as f64) / 1000.0;
+    to_timestamp(inner_seconds)
 }
 
 #[pg_extern(immutable, parallel_safe)]
@@ -182,6 +188,7 @@ CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
 CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
 CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
+CREATE CAST (ulid AS timestamptz) WITH FUNCTION ulid_to_timestamptz(ulid) AS IMPLICIT;
 CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz) AS IMPLICIT;
 "#,
     name = "ulid_casts",
@@ -191,6 +198,7 @@ CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz)
         ulid_to_bytea,
         ulid_to_timestamp,
         timestamp_to_ulid,
+        ulid_to_timestamptz,
         timestamptz_to_ulid
     ]
 );
@@ -207,6 +215,7 @@ mod tests {
         1, 134, 203, 101, 37, 215, 129, 218, 129, 92, 126, 37, 166, 191, 231, 219,
     ];
     const TIMESTAMP: &str = "2023-03-10 12:00:49.111";
+    const TIMESTAMPTZ: &str = "2023-03-10 12:00:49.111+00";
 
     #[pg_test]
     fn test_null_to_ulid() {
@@ -260,6 +269,15 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(Some("01GV5PA9EQ0000000000000000"), result);
+    }
+
+    #[pg_test]
+    fn test_ulid_to_timestamptz() {
+        let result = Spi::get_one::<&str>(&format!(
+            "SET TIMEZONE TO 'UTC'; SELECT '{TEXT}'::ulid::timestamptz::text;"
+        ))
+        .unwrap();
+        assert_eq!(Some(TIMESTAMPTZ), result);
     }
 
     #[pg_test]
