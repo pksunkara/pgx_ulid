@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+#### Enhancements
+* Added binary encoding support for ulid type
+* Added support for casting ulid to timestamptz
+
 ## 0.2.1
 
 #### Enhancements

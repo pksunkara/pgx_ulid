@@ -89,6 +89,9 @@ jobs:
           cp archive/*.control package/var/lib/postgresql/extension
           cp archive/*.sql package/var/lib/postgresql/extension
 
+          # Rename all files in extension directory from `NAME` to `EXT_NAME`
+          find package/var/lib/postgresql/extension -type f -name "${{ env.NAME }}*" | while read file; do mv "$file" "${file/${{ env.NAME }}/${{ env.EXT_NAME }}}"; done
+
           # symlinks to copy files into directory structure
           mkdir -p package/usr/lib/postgresql/${{ matrix.postgres }}/lib
           cd package/usr/lib/postgresql/${{ matrix.postgres }}/lib
