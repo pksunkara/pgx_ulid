@@ -9,6 +9,7 @@ use pgrx::{
     pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, PgSharedMemoryInitialization,
     StringInfo, Uuid,
 };
+use serde::{Deserialize, Serialize};
 
 ::pgrx::pg_module_magic!();
 
@@ -24,6 +25,9 @@ pub extern "C-unwind" fn _PG_init() {
     PostgresType, PostgresEq, PostgresHash, PostgresOrd, Debug, PartialEq, PartialOrd, Eq, Hash, Ord,
 )]
 #[inoutfuncs]
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+#[pg_binary_protocol]
 #[bikeshed_postgres_type_manually_impl_from_into_datum]
 pub struct ulid(u128);
 
@@ -355,6 +359,8 @@ mod tests {
         )
         .unwrap();
     }
+
+    // TODO: Add tests for binary protocol
 }
 
 /// This module is required by `cargo pgrx test` invocations.
