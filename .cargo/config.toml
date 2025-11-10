@@ -1,3 +1,8 @@
+[alias]
+format       = "fmt"
+format-check = "fmt --check"
+lint         = "clippy --all-targets --all-features -- -D warnings"
+
 [target.'cfg(target_os="macos")']
 # Postgres symbols won't be available until runtime
 rustflags = ["-Clink-arg=-Wl,-undefined,dynamic_lookup"]
