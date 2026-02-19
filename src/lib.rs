@@ -458,7 +458,49 @@ mod tests {
         assert_eq!(Some("01GV5PA9EQ0000000000000000".to_string()), result_min);
     }
 
-    // TODO: Add tests for binary protocol
+    // Binary protocol (send/recv): round-trip through table storage and retrieval.
+    #[pg_test]
+    fn test_binary_roundtrip_via_table() {
+        Spi::run("CREATE TABLE bin_ulid_t (id ulid);").unwrap();
+        Spi::run(&format!("INSERT INTO bin_ulid_t VALUES ('{TEXT}'::ulid);")).unwrap();
+        let result = Spi::get_one::<ulid>("SELECT id FROM bin_ulid_t;").unwrap();
+        assert_eq!(Some(ulid(INT)), result);
+    }
+
+    #[pg_test]
+    fn test_binary_roundtrip_null_via_table() {
+        Spi::run("CREATE TABLE bin_ulid_null_t (id ulid);").unwrap();
+        Spi::run("INSERT INTO bin_ulid_null_t VALUES (NULL);").unwrap();
+        let result = Spi::get_one::<ulid>("SELECT id FROM bin_ulid_null_t;").unwrap();
+        assert_eq!(None, result);
+    }
+
+    #[pg_test]
+    fn test_binary_roundtrip_multiple_via_table() {
+        const MIN_ULID: &str = "01GV5PA9EQ0000000000000000";
+        Spi::run("CREATE TABLE bin_ulid_multi_t (id ulid);").unwrap();
+        Spi::run(&format!(
+            "INSERT INTO bin_ulid_multi_t VALUES ('{TEXT}'::ulid), ('{MIN_ULID}'::ulid), (gen_ulid());"
+        ))
+        .unwrap();
+        let n = Spi::get_one::<i64>("SELECT count(*) FROM bin_ulid_multi_t;").unwrap();
+        assert_eq!(Some(3), n);
+        let min_row = Spi::get_one::<ulid>("SELECT id FROM bin_ulid_multi_t ORDER BY id LIMIT 1;").unwrap();
+        let min_expected = Spi::get_one::<ulid>(&format!("SELECT '{MIN_ULID}'::ulid;")).unwrap();
+        assert_eq!(min_expected, min_row);
+        let text_row = Spi::get_one::<ulid>(&format!("SELECT id FROM bin_ulid_multi_t WHERE id = '{TEXT}'::ulid;")).unwrap();
+        assert_eq!(Some(ulid(INT)), text_row);
+    }
+
+    #[pg_test]
+    fn test_binary_gen_ulid_roundtrip() {
+        Spi::run("CREATE TABLE bin_ulid_gen_t (id ulid);").unwrap();
+        Spi::run("INSERT INTO bin_ulid_gen_t VALUES (gen_ulid());").unwrap();
+        let result = Spi::get_one::<ulid>("SELECT id FROM bin_ulid_gen_t;").unwrap();
+        assert!(result.is_some());
+        let as_text = Spi::get_one::<String>("SELECT id::text FROM bin_ulid_gen_t;").unwrap();
+        assert!(as_text.unwrap().len() >= 26);
+    }
 }
 
 /// This module is required by `cargo pgrx test` invocations.
