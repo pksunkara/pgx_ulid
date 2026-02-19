@@ -1,7 +1,7 @@
 [package]
 name    = "pgx_ulid"
 publish = false
-version = "0.2.2"
+version = "0.2.3"
 
 edition      = "2021"
 rust-version = "1.85.0"
@@ -24,11 +24,11 @@ pg_test = []
 
 [dependencies]
 inner_ulid = { package = "ulid", version = "1.1.3" }
-pgrx       = "^0.16.1"
+pgrx       = "^0.17.0"
 serde      = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
-pgrx-tests = "^0.16.1"
+pgrx-tests = "^0.17.0"
 
 [profile.dev]
 panic = "unwind"

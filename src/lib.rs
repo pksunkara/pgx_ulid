@@ -185,6 +185,26 @@ fn timestamptz_to_ulid(input: TimestampWithTimeZone) -> ulid {
     ulid(inner.0)
 }
 
+/// State transition for MIN(ulid) aggregate: returns the smaller of state and value.
+/// Accepts NULL state (first row) and returns the value.
+#[pg_extern(immutable, parallel_safe)]
+fn ulid_smaller(state: Option<ulid>, value: ulid) -> ulid {
+    match state {
+        None => value,
+        Some(s) => if s <= value { s } else { value },
+    }
+}
+
+/// State transition for MAX(ulid) aggregate: returns the larger of state and value.
+/// Accepts NULL state (first row) and returns the value.
+#[pg_extern(immutable, parallel_safe)]
+fn ulid_larger(state: Option<ulid>, value: ulid) -> ulid {
+    match state {
+        None => value,
+        Some(s) => if s >= value { s } else { value },
+    }
+}
+
 extension_sql!(
     r#"
 CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
@@ -205,6 +225,22 @@ CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz)
         ulid_to_timestamptz,
         timestamptz_to_ulid
     ]
+);
+
+extension_sql!(
+    r#"
+CREATE AGGREGATE min(ulid) (
+    SFUNC = ulid_smaller,
+    STYPE = ulid
+);
+
+CREATE AGGREGATE max(ulid) (
+    SFUNC = ulid_larger,
+    STYPE = ulid
+);
+"#,
+    name = "ulid_aggregates",
+    requires = [ulid_smaller, ulid_larger]
 );
 
 #[cfg(any(test, feature = "pg_test"))]
@@ -358,6 +394,55 @@ mod tests {
             JOIN foo ON bar.id = foo.id;",
         )
         .unwrap();
+    }
+
+    #[pg_test]
+    fn test_min_ulid_aggregate() {
+        // min(ulid) works without explicit cast
+        let result = Spi::get_one::<String>(
+            "SELECT min(id)::text FROM (VALUES ('01GV5PA9EQG7D82Q3Y4PKBZSYV'::ulid), ('01GV5PA9EQ0000000000000000'::ulid)) AS t(id);",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQ0000000000000000".to_string()), result);
+    }
+
+    #[pg_test]
+    fn test_max_ulid_aggregate() {
+        // max(ulid) works without explicit cast
+        let result = Spi::get_one::<String>(
+            "SELECT max(id)::text FROM (VALUES ('01GV5PA9EQG7D82Q3Y4PKBZSYV'::ulid), ('01GV5PA9EQ0000000000000000'::ulid)) AS t(id);",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQG7D82Q3Y4PKBZSYV".to_string()), result);
+    }
+
+    #[pg_test]
+    fn test_min_max_ulid_group_by_order_by() {
+        // Reproduces the user scenario: group by ... order by max(id) without cast
+        Spi::run(
+            r#"
+            CREATE TABLE contacts (
+                id ulid,
+                bucket int
+            );
+            INSERT INTO contacts (id, bucket) VALUES
+                ('01GV5PA9EQ0000000000000000'::ulid, 1),
+                ('01GV5PA9EQG7D82Q3Y4PKBZSYV'::ulid, 1),
+                ('01GV5PA9EQG7D82Q3Y4PKBZSYW'::ulid, 2);
+            "#,
+        )
+        .unwrap();
+        // ORDER BY max(id) and SELECT max(id) work without ::bytea cast
+        let result = Spi::get_one::<String>(
+            "SELECT max(id)::text FROM contacts GROUP BY bucket ORDER BY max(id) DESC LIMIT 1;",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQG7D82Q3Y4PKBZSYW".to_string()), result);
+        let result_min = Spi::get_one::<String>(
+            "SELECT min(id)::text FROM contacts GROUP BY bucket ORDER BY min(id) LIMIT 1;",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQ0000000000000000".to_string()), result_min);
     }
 
     // TODO: Add tests for binary protocol
