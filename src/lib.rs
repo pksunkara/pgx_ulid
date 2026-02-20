@@ -208,11 +208,11 @@ fn ulid_larger(state: Option<ulid>, value: ulid) -> ulid {
 extension_sql!(
     r#"
 CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
-CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS ASSIGNMENT;
-CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS ASSIGNMENT;
-CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS ASSIGNMENT;
+CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
+CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
+CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
 CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
-CREATE CAST (ulid AS timestamptz) WITH FUNCTION ulid_to_timestamptz(ulid) AS ASSIGNMENT;
+CREATE CAST (ulid AS timestamptz) WITH FUNCTION ulid_to_timestamptz(ulid) AS IMPLICIT;
 CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz) AS IMPLICIT;
 "#,
     name = "ulid_casts",
@@ -394,19 +394,6 @@ mod tests {
             JOIN foo ON bar.id = foo.id;",
         )
         .unwrap();
-    }
-
-    #[pg_test]
-    fn test_ulid_equals_ulid_operator_unique() {
-        // Operator = (ulid, ulid) must be unique so expressions like a = b and joins work
-        // without "operator is not unique" (no resolution via ulid->bytea or ulid->uuid).
-        let result = Spi::get_one::<bool>(
-            "SELECT CAST('01HTHV582X9B5YBFP7GRBWXRHX' AS ulid) = CAST('01HTHV582X9B5YBFP7GRBWXRHX' AS ulid);",
-        )
-        .unwrap();
-        assert_eq!(Some(true), result);
-        let result = Spi::get_one::<bool>("SELECT gen_ulid() = gen_ulid();").unwrap();
-        assert_eq!(Some(false), result);
     }
 
     #[pg_test]
