@@ -319,6 +319,20 @@ mod tests {
     }
 
     #[pg_test]
+    fn test_ulid_equals_ulid_operator_unique() {
+        // Operator = (ulid, ulid) must be unique so expressions like a = b and joins work
+        // without "operator is not unique" (no resolution via ulid->bytea or ulid->uuid).
+        let result = Spi::get_one::<bool>(
+            "SELECT CAST('01HTHV582X9B5YBFP7GRBWXRHX' AS ulid) = CAST('01HTHV582X9B5YBFP7GRBWXRHX' AS ulid);",
+        )
+        .unwrap();
+        assert_eq!(Some(true), result);
+
+        let result = Spi::get_one::<bool>("SELECT gen_ulid() = gen_ulid();").unwrap();
+        assert_eq!(Some(false), result);
+    }
+
+    #[pg_test]
     fn test_hash() {
         Spi::run(
             "CREATE TABLE foo (
