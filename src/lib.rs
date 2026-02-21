@@ -5,10 +5,7 @@ use inner_ulid::Ulid as InnerUlid;
 use pg_sys::Datum as SysDatum;
 use pgrx::callconv::{ArgAbi, BoxRet};
 use pgrx::datum::Datum;
-use pgrx::{
-    pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, PgSharedMemoryInitialization,
-    StringInfo, Uuid,
-};
+use pgrx::{pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, StringInfo, Uuid};
 use serde::{Deserialize, Serialize};
 
 ::pgrx::pg_module_magic!();
@@ -194,7 +191,11 @@ impl Aggregate<UlidMin> for UlidMin {
     type Args = ulid;
     type State = ulid;
 
-    fn state(current: Self::State, arg: Self::Args, _fcinfo: pg_sys::FunctionCallInfo) -> Self::State {
+    fn state(
+        current: Self::State,
+        arg: Self::Args,
+        _fcinfo: pg_sys::FunctionCallInfo,
+    ) -> Self::State {
         if current <= arg {
             current
         } else {
@@ -224,7 +225,11 @@ impl Aggregate<UlidMax> for UlidMax {
     type Args = ulid;
     type State = ulid;
 
-    fn state(current: Self::State, arg: Self::Args, _fcinfo: pg_sys::FunctionCallInfo) -> Self::State {
+    fn state(
+        current: Self::State,
+        arg: Self::Args,
+        _fcinfo: pg_sys::FunctionCallInfo,
+    ) -> Self::State {
         if current >= arg {
             current
         } else {
