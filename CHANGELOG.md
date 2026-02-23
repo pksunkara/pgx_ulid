@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+#### Enhancements
+* Added `min` and `max` aggregates
+
 ## 0.2.2
 
 #### Enhancements
