@@ -5,10 +5,7 @@ use inner_ulid::Ulid as InnerUlid;
 use pg_sys::Datum as SysDatum;
 use pgrx::callconv::{ArgAbi, BoxRet};
 use pgrx::datum::Datum;
-use pgrx::{
-    pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, PgSharedMemoryInitialization,
-    StringInfo, Uuid,
-};
+use pgrx::{pg_shmem_init, pg_sys::Oid, prelude::*, rust_regtypein, PgLwLock, StringInfo, Uuid};
 use serde::{Deserialize, Serialize};
 
 ::pgrx::pg_module_magic!();
@@ -185,6 +182,74 @@ fn timestamptz_to_ulid(input: TimestampWithTimeZone) -> ulid {
     ulid(inner.0)
 }
 
+#[derive(Debug, AggregateName)]
+#[aggregate_name = "min"]
+struct UlidMin;
+
+#[pg_aggregate]
+impl Aggregate<UlidMin> for UlidMin {
+    type Args = ulid;
+    type State = ulid;
+
+    fn state(
+        current: Self::State,
+        arg: Self::Args,
+        _fcinfo: pg_sys::FunctionCallInfo,
+    ) -> Self::State {
+        if current <= arg {
+            current
+        } else {
+            arg
+        }
+    }
+
+    fn combine(
+        first: Self::State,
+        second: Self::State,
+        _fcinfo: pg_sys::FunctionCallInfo,
+    ) -> Self::State {
+        if first <= second {
+            first
+        } else {
+            second
+        }
+    }
+}
+
+#[derive(Debug, AggregateName)]
+#[aggregate_name = "max"]
+struct UlidMax;
+
+#[pg_aggregate]
+impl Aggregate<UlidMax> for UlidMax {
+    type Args = ulid;
+    type State = ulid;
+
+    fn state(
+        current: Self::State,
+        arg: Self::Args,
+        _fcinfo: pg_sys::FunctionCallInfo,
+    ) -> Self::State {
+        if current >= arg {
+            current
+        } else {
+            arg
+        }
+    }
+
+    fn combine(
+        first: Self::State,
+        second: Self::State,
+        _fcinfo: pg_sys::FunctionCallInfo,
+    ) -> Self::State {
+        if first >= second {
+            first
+        } else {
+            second
+        }
+    }
+}
+
 extension_sql!(
     r#"
 CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
@@ -358,6 +423,52 @@ mod tests {
             JOIN foo ON bar.id = foo.id;",
         )
         .unwrap();
+    }
+
+    #[pg_test]
+    fn test_min_ulid_aggregate() {
+        let result = Spi::get_one::<String>(
+            "SELECT min(id)::text FROM (VALUES ('01GV5PA9EQG7D82Q3Y4PKBZSYV'::ulid), ('01GV5PA9EQ0000000000000000'::ulid)) AS t(id);",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQ0000000000000000".to_string()), result);
+    }
+
+    #[pg_test]
+    fn test_max_ulid_aggregate() {
+        let result = Spi::get_one::<String>(
+            "SELECT max(id)::text FROM (VALUES ('01GV5PA9EQG7D82Q3Y4PKBZSYV'::ulid), ('01GV5PA9EQ0000000000000000'::ulid)) AS t(id);",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQG7D82Q3Y4PKBZSYV".to_string()), result);
+    }
+
+    #[pg_test]
+    fn test_min_max_ulid_group_by_order_by() {
+        Spi::run(
+            r#"
+            CREATE TABLE contacts (
+                id ulid,
+                bucket int
+            );
+            INSERT INTO contacts (id, bucket) VALUES
+                ('01GV5PA9EQ0000000000000000'::ulid, 1),
+                ('01GV5PA9EQG7D82Q3Y4PKBZSYV'::ulid, 1),
+                ('01GV5PA9EQG7D82Q3Y4PKBZSYW'::ulid, 2);
+            "#,
+        )
+        .unwrap();
+
+        let result = Spi::get_one::<String>(
+            "SELECT max(id)::text FROM contacts GROUP BY bucket ORDER BY max(id) DESC LIMIT 1;",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQG7D82Q3Y4PKBZSYW".to_string()), result);
+        let result_min = Spi::get_one::<String>(
+            "SELECT min(id)::text FROM contacts GROUP BY bucket ORDER BY min(id) LIMIT 1;",
+        )
+        .unwrap();
+        assert_eq!(Some("01GV5PA9EQ0000000000000000".to_string()), result_min);
     }
 
     // TODO: Add tests for binary protocol
