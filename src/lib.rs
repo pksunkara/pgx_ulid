@@ -120,33 +120,33 @@ fn gen_ulid() -> ulid {
     ulid(InnerUlid::new().0)
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn ulid_from_uuid(input: Uuid) -> ulid {
     let mut bytes = *input.as_bytes();
     bytes.reverse();
     ulid(u128::from_ne_bytes(bytes))
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn ulid_to_uuid(input: ulid) -> Uuid {
     let mut bytes = input.0.to_ne_bytes();
     bytes.reverse();
     Uuid::from_bytes(bytes)
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn ulid_to_bytea(input: ulid) -> Vec<u8> {
     let mut bytes = input.0.to_ne_bytes();
     bytes.reverse();
     bytes.to_vec()
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn ulid_to_timestamp(input: ulid) -> Timestamp {
     ulid_to_timestamptz(input).into()
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn timestamp_to_ulid(input: Timestamp) -> ulid {
     let epoch: f64 = input
         .extract_part(DateTimeParts::Epoch)
@@ -161,13 +161,13 @@ fn timestamp_to_ulid(input: Timestamp) -> ulid {
     ulid(inner.0)
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn ulid_to_timestamptz(input: ulid) -> TimestampWithTimeZone {
     let inner_seconds = (InnerUlid(input.0).timestamp_ms() as f64) / 1000.0;
     to_timestamp(inner_seconds)
 }
 
-#[pg_extern(immutable, parallel_safe)]
+#[pg_cast(implicit, immutable, parallel_safe)]
 fn timestamptz_to_ulid(input: TimestampWithTimeZone) -> ulid {
     let epoch: f64 = input
         .extract_part(DateTimeParts::Epoch)
@@ -249,28 +249,6 @@ impl Aggregate<UlidMax> for UlidMax {
         }
     }
 }
-
-extension_sql!(
-    r#"
-CREATE CAST (uuid AS ulid) WITH FUNCTION ulid_from_uuid(uuid) AS IMPLICIT;
-CREATE CAST (ulid AS uuid) WITH FUNCTION ulid_to_uuid(ulid) AS IMPLICIT;
-CREATE CAST (ulid AS bytea) WITH FUNCTION ulid_to_bytea(ulid) AS IMPLICIT;
-CREATE CAST (ulid AS timestamp) WITH FUNCTION ulid_to_timestamp(ulid) AS IMPLICIT;
-CREATE CAST (timestamp AS ulid) WITH FUNCTION timestamp_to_ulid(timestamp) AS IMPLICIT;
-CREATE CAST (ulid AS timestamptz) WITH FUNCTION ulid_to_timestamptz(ulid) AS IMPLICIT;
-CREATE CAST (timestamptz AS ulid) WITH FUNCTION timestamptz_to_ulid(timestamptz) AS IMPLICIT;
-"#,
-    name = "ulid_casts",
-    requires = [
-        ulid_from_uuid,
-        ulid_to_uuid,
-        ulid_to_bytea,
-        ulid_to_timestamp,
-        timestamp_to_ulid,
-        ulid_to_timestamptz,
-        timestamptz_to_ulid
-    ]
-);
 
 #[cfg(any(test, feature = "pg_test"))]
 #[pg_schema]
