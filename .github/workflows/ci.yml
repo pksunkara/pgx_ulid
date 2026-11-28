@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        postgres: [14, 15, 16, 17, 18]
+        postgres: [15, 16, 17, 18, 19]
         runner:
           - ubuntu-22.04
           - ubuntu-22.04-arm
@@ -39,7 +39,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install rust
-        uses: dtolnay/rust-toolchain@1.90.0
+        uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: rustfmt, clippy
       - name: Format check
@@ -51,6 +51,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install rust
-        uses: dtolnay/rust-toolchain@1.90.0
+        uses: dtolnay/rust-toolchain@1.99.1
       - name: Lockfile check
         run: cargo update -w --locked
