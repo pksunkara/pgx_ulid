@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+#### BREAKING
+* Removed support for Postgres 14
+
+#### Enhancements
+* Added support for Postgres 19
+
 ## 0.2.3
 
 #### Enhancements
@@ -20,6 +28,7 @@
 
 #### BREAKING
 * Removed support for Postgres 11, 12 & 13
+* Renamed extension to pgx_ulid
 
 #### Enhancements
 * Added support for Postgres 17
