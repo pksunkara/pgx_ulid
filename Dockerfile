@@ -7,6 +7,7 @@ RUN apt-get update
 ENV build_deps ca-certificates \
   git \
   build-essential \
+  libicu-dev \
   libpq-dev \
   postgresql-server-dev-${PG_MAJOR} \
   curl \
